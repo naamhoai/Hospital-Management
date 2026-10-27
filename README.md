@@ -15,7 +15,7 @@ Mở **http://localhost:8080/hospital**. MySQL của Compose dùng cổng máy c
 ## Chạy bằng IDE và Tomcat
 
 1. Cài JDK 17+, Maven 3.9, MySQL 8.4 và Tomcat **10.1**. Trong IntelliJ/NetBeans/Eclipse chọn **Open Maven Project** tại `pom.xml`.
-2. Trong MySQL Workbench, chạy lần lượt `database/01-schema.sql`, `02-seed.sql`, `03-create-local-user.sql` trên một database mới. Script không xóa hoặc ghi đè dữ liệu cũ. Seed chỉ chạy một lần.
+2. Trong MySQL Workbench, chạy lần lượt `database/01-schema.sql` → `database/04-operational-extensions.sql` → `database/02-seed.sql` → `database/03-create-local-user.sql` trên một database mới. Script không xóa hoặc ghi đè dữ liệu cũ. Seed chỉ chạy một lần.
 3. Đặt biến môi trường cho tiến trình Tomcat:
 
 ```powershell
@@ -80,16 +80,43 @@ src/main/java/vn/hospital/
   filter/        UTF-8, HttpSession, phân quyền và CSRF
   service/       Quy tắc nghiệp vụ và ranh giới transaction
   dao/           JDBC PreparedStatement, truy vấn MySQL và audit
-  model/         AuthUser và các request/item DTO
+  model/         17 entity Java Bean trong SDS, Room, request và report models
   integration/   QueueContextPort, VNPayClient, EmailClient
   listener/      Tác vụ nền, outbox email và nhãn giao diện
-  util/          Cấu hình, kiểm tra dữ liệu, băm mật khẩu
+  util/          DB connection/transaction, cấu hình, validation, băm mật khẩu, file storage
 src/main/webapp/WEB-INF/views/   JSP, không truy cập trực tiếp từ URL
 database/                      Schema, seed, user MySQL cho máy local
 docs/                          Phân công và phạm vi triển khai
 ```
 
-Truy vấn danh sách nhiều bảng trả về `Map` projection cho JSP; chưa chuyển toàn bộ các bảng thành Java Bean như bản đặc tả entity của báo cáo. Request DTO dùng Java record. `MedicalRecordDAO`, `QueueContextPort`, `EMRService` và các controller giữ vai trò tương ứng với thiết kế; chữ ký hàm có bổ sung `AuthUser` để kiểm tra quyền ở Service.
+Controller chỉ nhận HTTP, gọi Service và forward JSP. Toàn bộ SQL nghiệp vụ nằm trong DAO; Service điều phối transaction và kiểm tra quyền. DAO ánh xạ domain sang Java Bean qua `BeanMapper`; các danh sách JOIN cho màn hình vẫn là projection `Map`, không thay thế domain model.
+
+Chi tiết đối chiếu báo cáo, CD10–CD12/SQ16–SQ20, quan hệ ERD và những điểm tài liệu tự mâu thuẫn nằm trong [docs/DESIGN_TRACEABILITY.md](docs/DESIGN_TRACEABILITY.md). `model` chính là package `bean (model)` trong bảng mô tả package; `integration` và `listener` chứa adapter/tác vụ khởi động kỹ thuật.
+
+### Thay đổi trên nhánh Nam
+
+- EMR nhận `queueId`, kiểm tra phân công bác sĩ, lưu `DiagnosisRequest`, lịch sử bệnh nhân, khóa bệnh án khi kết thúc.
+- Kê đơn sau khi có đủ kết quả cận lâm sàng (nếu có), tìm theo tên/hoạt chất; kê nhiều thuốc bằng `PrescriptionRequest`, kiểm tra tồn kho, chụp giá và lưu chi tiết trong cùng transaction; xem/in/tải PDF đơn thuốc có tiếng Việt.
+- In phiếu chỉ định PDF; tạo chỉ định dịch vụ bằng `ClinicalOrderRequest`, hủy khi chưa thực hiện/chưa thanh toán/chưa lên hóa đơn. Kết quả chỉ duyệt sau thanh toán và không sửa sau duyệt.
+- Tải PDF/PNG/JPEG tối đa 5 MB; tệp nằm ngoài webroot, tải qua endpoint kiểm tra quyền theo bệnh án.
+- Bệnh nhân xem hồ sơ, kết quả, đơn thuốc và hóa đơn của chính mình tại `/my-records`; đăng nhập bằng `patient@hospital.test`.
+- `ReportFilter` lọc ngày/khoa/dịch vụ chỉ định/phương thức, nhóm DAY/MONTH/QUARTER; `PatientFlowReport`/`RevenueReport`/`ChartDataPoint` phục vụ bảng và biểu đồ. Excel có sheet chi tiết + thông tin bộ lọc, PDF nhúng Noto Sans có dấu tiếng Việt.
+- Kết thúc khám tự lập/cập nhật hóa đơn cho chi phí còn chưa tính. Hóa đơn đang có giao dịch VNPay được giữ nguyên cho đến khi giao dịch hết hạn/xử lý xong.
+- Giao diện chung nền sáng, điều hướng theo vai trò, danh sách chọn bệnh nhân và trạng thái tiếng Việt, bố cục đáp ứng desktop/mobile.
+
+### Database mới và database cũ
+
+`01-schema.sql` chứa **18 bảng nghiệp vụ** của báo cáo. `04-operational-extensions.sql` thêm **5 bảng kỹ thuật** và các cột giữ giá/khóa/audit cần cho ứng dụng chạy. Tổng schema thực thi là 23 bảng; các bảng kỹ thuật được liệt kê riêng trong tài liệu đối chiếu, không coi là 18 bảng ERD.
+
+Bản cũ có `users.password_hash` và `medical_record.queue_id`: dùng `database/migrations/20261027-sds-alignment.sql` sau khi sao lưu. Migration giữ dữ liệu, đổi tên cột mật khẩu và bỏ liên kết queue dư; queue được tìm qua `appointment_id`. **Không chạy lại schema/seed/extensions trên database đã có dữ liệu**, và không áp dụng mọi file migrations một cách máy móc. Chọn migration đúng phiên bản nguồn.
+
+Để chạy cổng 3000 khi phát triển:
+
+```powershell
+./scripts/run-dev.ps1 -Port 3000
+```
+
+Cấu hình DB qua biến môi trường hoặc file local như hướng dẫn phía trên. Script cần Maven trên PATH và MySQL đã chạy. Không phụ thuộc thư mục `.local` của máy tác giả.
 
 ## Quy tắc đã có
 
@@ -111,6 +138,12 @@ Truy vấn danh sách nhiều bảng trả về `Map` projection cho JSP; chưa 
 
 Đặt `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET` và `APP_BASE_URL` bằng thông tin tài khoản merchant sandbox. Endpoint trả về: `/payment/return`; endpoint IPN: `/payment/ipn`. Cấu hình IPN với VNPay và dùng HTTPS/tunnel khi nhà cung cấp cần gọi vào máy local. Code xác minh HMAC-SHA512, merchant, mã tham chiếu và số tiền; không đánh dấu PAID chỉ vì người dùng bấm nút. Chưa có merchant thật nên chưa đối soát được với VNPay sandbox ngoài mạng. Tiền mặt chạy độc lập để demo.
 
+### Hệ thống dược (tùy chọn)
+
+`PHARMACY_BASE_URL` bật adapter HTTPS. Hợp đồng tích hợp hiện là POST `/interactions` với các dòng `medicationId,quantity`, trả về cảnh báo dạng từng dòng; POST `/prescriptions` nhận mã đơn để thông báo đồng bộ. Đây là adapter theo hợp đồng của dự án, chưa phải API đã xác nhận với nhà cung cấp bệnh viện. Khi chưa cấu hình, giao diện nói rõ không kiểm tra tương tác tự động; không báo giả đã đồng bộ. Lỗi đồng bộ sau commit được ghi log, không tạo lại đơn hoặc trừ kho lần hai.
+
+`ICD_CATALOG_FILE` có thể trỏ đến danh mục CSV đã được nhóm duyệt (`code,description`). Mặc định chỉ có 4 mã minh họa trong resource, không phải bộ ICD đầy đủ.
+
 ### Email
 
 Đặt `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`. SMTP yêu cầu STARTTLS. Nếu chưa cấu hình, email giữ PENDING trong `notification_outbox`. Chưa tích hợp SMS; không có thông báo giả rằng SMS/email đã gửi thành công.
@@ -121,8 +154,10 @@ Truy vấn danh sách nhiều bảng trả về `Map` projection cho JSP; chưa 
 mvn test
 ```
 
-13 unit test chạy mặc định, gồm 7 trường hợp hồi quy cho CSRF và phiên đăng nhập hết hạn. 3 integration test trong `WorkflowTest` chỉ chạy khi `HOSPITAL_INTEGRATION=1`, `DB_URL` trỏ vào **database riêng tên `hospital_test`**, đã nạp schema và seed tương tự. Test chủ động ghi dữ liệu demo; không dùng database triển khai. Kiểm thử xác nhận cả rollback tồn kho, tranh chỗ cuối và cấp hai giờ khác nhau khi đặt đồng thời.
+20 test chạy mặc định, gồm kiểm tra kiến trúc, Java Bean, PDF Unicode và 7 trường hợp CSRF/session. 9 integration test trong `WorkflowTest` và `NamWorkflowTest` chỉ chạy khi `HOSPITAL_INTEGRATION=1`, `DB_URL` trỏ vào **database riêng tên `hospital_test`**, đã nạp schema và seed tương tự. Test chủ động ghi dữ liệu demo; không dùng database triển khai. Kiểm thử xác nhận cả rollback tồn kho, tranh chỗ cuối và cấp hai giờ khác nhau khi đặt đồng thời.
 
 `scripts/smoke_http.py` chạy với Python 3 trên app đang chạy và database demo mới; kiểm tra HTTP, CSRF, phân quyền, các JSP, trọn luồng khám và file xuất. Script dùng tài khoản demo, có ghi dữ liệu; không chạy trên dữ liệu thực.
+
+Có kiểm thử riêng cho quyền đọc hồ sơ/tệp, kết quả khóa sau duyệt, hủy chỉ định, bộ lọc/nhóm doanh thu và báo cáo không dữ liệu.
 
 Chi tiết kết quả kiểm tra và những phần còn cần phát triển nằm trong `docs/VALIDATION.md` và `docs/SCOPE.md`.

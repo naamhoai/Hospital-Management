@@ -1,4 +1,4 @@
-param([int]$Port=8080)
+param([int]$Port=3000)
 $ErrorActionPreference='Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $env:HTTP_PORT="$Port"
