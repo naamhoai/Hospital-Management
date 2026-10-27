@@ -1,0 +1,8 @@
+.tools
+.local
+target
+.git
+.env
+**/__pycache__
+**/*.pyc
+src/main/resources/application-local.properties

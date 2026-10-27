@@ -1,0 +1,5 @@
+<%@ include file="_header.jspf" %>
+<h1>Xin chào, <c:out value="${sessionScope.user.fullName}"/></h1><p class="muted">Chọn chức năng trên thanh điều hướng để bắt đầu.</p>
+<div class="grid"><div class="card"><h2>01 · Đặt lịch</h2><p>Tìm bác sĩ, chọn ca còn chỗ, đặt và theo dõi lịch khám.</p><a class="button" href="${ctx}/search">Tìm lịch khám</a></div><div class="card"><h2>02 · Tiếp nhận & khám</h2><p>Lễ tân cấp số chờ. Bác sĩ gọi bệnh nhân, nhập chẩn đoán, kê đơn và chỉ định xét nghiệm.</p></div><div class="card"><h2>03 · Hoàn tất</h2><p>Thu ngân lập hóa đơn. Kỹ thuật viên nhập kết quả đã thanh toán. Quản lý xem thống kê và xuất báo cáo.</p></div></div>
+<div class="card"><h2>Phân công nhóm</h2><p><strong>Khánh:</strong> Authentication · Search · Feedback</p><p><strong>Tráng:</strong> Appointments · Catalog · Billing</p><p><strong>Kiên:</strong> Schedules · Reception · Queue</p><p><strong>Nam:</strong> EMR & Prescription · Clinical & Lab · Reports</p></div>
+<%@ include file="_footer.jspf" %>

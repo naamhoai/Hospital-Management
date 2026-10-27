@@ -1,0 +1,34 @@
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: hospital
+      MYSQL_USER: hospital
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change-me-local}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-me-root-local}
+      TZ: Asia/Ho_Chi_Minh
+    ports: ["127.0.0.1:3307:3306"]
+    volumes:
+      - hospital-db:/var/lib/mysql
+      - ./database/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  web:
+    build: .
+    environment:
+      DB_URL: jdbc:mysql://db:3306/hospital?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      DB_USER: hospital
+      DB_PASSWORD: ${DB_PASSWORD:-change-me-local}
+      APP_BASE_URL: http://localhost:8080/hospital
+      TZ: Asia/Ho_Chi_Minh
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      db: {condition: service_healthy}
+volumes:
+  hospital-db:

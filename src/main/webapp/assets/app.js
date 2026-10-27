@@ -1,0 +1,3 @@
+document.addEventListener('submit',function(e){const message=e.target.dataset.confirm;if(message&&!window.confirm(message))e.preventDefault();});
+document.addEventListener('click',function(e){if(e.target.matches('[data-print]'))window.print();if(e.target.matches('[data-add-med]')){const template=document.querySelector('#med-template');document.querySelector('#med-items').append(template.content.cloneNode(true));}if(e.target.matches('[data-remove-med]'))e.target.closest('.med-row').remove();});
+document.querySelectorAll('[data-bar]').forEach(function(el){const value=Number(el.dataset.bar);el.style.width=Math.max(0,Math.min(100,value))+'%';});
