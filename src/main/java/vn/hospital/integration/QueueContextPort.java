@@ -1,7 +1,21 @@
 package vn.hospital.integration;
-import vn.hospital.dao.Jdbc;
+
 import java.sql.*;
-import java.util.*;
+import vn.hospital.dao.QueueDAO;
+import vn.hospital.model.QueueContext;
+import vn.hospital.util.Database;
+
+/** Read-only boundary between operations and clinical EMR. */
 public class QueueContextPort {
-    public Map<String,Object> getContext(Connection c,long queue) throws SQLException { return Jdbc.one(c,"SELECT * FROM queue WHERE queue_id=?",queue); }
+  public QueueContext getContext(Integer queueId) {
+    return Database.tx(c -> getContext(c, queueId));
+  }
+
+  public QueueContext getContext(Connection c, long queueId) throws SQLException {
+    return new QueueDAO().findContext(c, queueId);
+  }
+
+  public boolean verifyQueueContext(Integer queueId) {
+    return getContext(queueId) != null;
+  }
 }

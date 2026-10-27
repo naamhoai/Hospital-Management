@@ -1,53 +1,36 @@
-# Kết quả kiểm tra
+# Kết quả kiểm tra — 27/10/2026
 
-Ngày kiểm tra: **27/10/2026**, múi giờ Asia/Ho_Chi_Minh.
+## Môi trường thực tế
 
-## Môi trường đã chạy thực tế
+Windows; JDK 21.0.11 biên dịch `--release 17`; Maven 3.9.11; Apache Tomcat 10.1.61; MySQL **9.3.0 cài trên máy** (cổng test riêng 33307). Cấu hình dự án/Compose hướng tới Java 17+, Tomcat 10.1 và MySQL 8.4. Chưa chạy container MySQL 8.4 trong lần kiểm tra này; không coi kiểm tra 9.3 là chứng nhận riêng cho 8.4.
 
-- JDK có trên máy: **21.0.11**; Maven compiler dùng `--release 17`, sinh class tương thích Java 17.
-- Maven **3.9.11**, Tomcat nhúng **10.1.61**, JSP/JSTL thật.
-- MySQL có sẵn trên máy: **9.3.0**, chạy instance thử riêng tại `127.0.0.1:33307`, không dùng dịch vụ hoặc database có sẵn của người dùng.
-- Cấu hình bàn giao và Docker Compose nhắm **MySQL 8.4**. Chưa chạy Docker/MySQL 8.4 thực tế trên máy này; schema dùng cú pháp MySQL 8 trở lên.
-- HTTP thử nghiệm chỉ bind localhost cổng **18080**.
+## Java và database
 
-## Kết quả
+Lệnh: `HOSPITAL_INTEGRATION=1`, `DB_URL` trỏ database riêng **hospital_test**, `mvn test package`.
 
-**Build WAR thành công. 9 kiểm thử Java qua, 0 lỗi, 0 bị bỏ qua khi bật integration.**
+| Bộ kiểm thử | Số trường hợp | Kết quả |
+|---|---:|---|
+| CoreTest | 6 | Qua |
+| SecurityFilterTest | 7 | Qua |
+| DesignContractTest | 7 | Qua |
+| NamWorkflowTest | 6 | Qua |
+| WorkflowTest | 3 | Qua |
+| **Tổng** | **29** | **Không lỗi, không bỏ qua** |
 
-6 unit test kiểm tra:
+- Kiểm tra mật khẩu salted hash, HMAC, validation, Excel thực (ZIP/OpenXML), PDF nhiều trang.
+- CSRF, session hết hạn không replay POST, role filtering.
+- Controller không truy cập DAO, SQL chỉ ở DAO, 18 bảng nghiệp vụ, chữ ký domain typed, Java Bean mapping, PDF giữ dấu tiếng Việt, filter whitelist, tệp sai định dạng/quá lớn/traversal.
+- Nam: quyền sở hữu hồ sơ/đơn/tệp; tồn kho; hủy chỉ định không lên hóa đơn; kết quả chỉ sau PAID, khóa sau duyệt; hai kỹ thuật viên duyệt đồng thời chỉ thành công một lần; ngày/khoa/dịch vụ/phương thức/nhóm báo cáo; không có dữ liệu; file xuất hợp lệ.
+- Toàn viện: đặt → check-in → gọi → chẩn đoán → chỉ định → trả tiền → kết quả → kê đơn → trả thuốc → đóng bệnh án → đánh giá. Rollback tồn kho; tranh suất cuối; hai suất sinh giờ khác nhau.
 
-1. Mật khẩu có salt khác nhau; so khớp đúng/sai và hash hỏng.
-2. Kiểm tra số tiền âm, phần thập phân, ngày không tồn tại.
-3. Sắp xếp và encode tham số ký VNPay, loại trường chữ ký.
-4. HMAC-SHA512 khớp test vector đã biết.
-5. File Excel là XLSX ZIP hợp lệ, text công thức được ghi dạng inline string.
-6. File PDF đọc lại được và tự chia trang với nhiều dòng.
+Tạo database tạm mới: `01-schema.sql` xác nhận **18 bảng**, áp dụng `04-operational-extensions.sql` thành **23 bảng**, seed 10 tài khoản thành công. Áp dụng migration `20261027-sds-alignment.sql` trên schema MVP từ Git HEAD: giữ nguyên user ID/password hash và liên kết bệnh án–queue/đơn/kết quả, xóa queue_id dư trong medical_record. Chỉ các database tạm do kiểm tra tạo mới bị dọn sau kiểm tra.
 
-3 integration test trên `hospital_test` kiểm tra:
+## HTTP và giao diện
 
-- Login đúng/sai; đặt lịch; chặn ca đầy; check-in một lần; gọi bệnh nhân; quyền bác sĩ; mã ICD; lưu chẩn đoán; chỉ định xét nghiệm; chặn kết quả chưa trả tiền; thanh toán; chống thanh toán lại; khóa kết quả duyệt; hoàn tác tồn kho khi đơn nhiều thuốc bị lỗi; xuất đơn hợp lệ; hóa đơn nhiều đợt không tính lại chi phí; đóng bệnh án; chặn sửa bệnh án đóng; đánh giá một lần; chặn người khác đánh giá; doanh thu PAID chính xác.
-- Hai luồng tranh chỗ cuối của cùng ca: đúng một luồng đặt được, booked_count bằng 1.
-- Hai luồng cùng đặt vào ca còn hai chỗ: cả hai đặt được và được cấp hai giờ khác nhau. Database có UNIQUE theo bác sĩ và giờ hẹn đang chiếm chỗ.
+`scripts/smoke_http.py http://localhost:3000/hospital`: **82 kiểm tra HTTP qua**. Lần cuối chạy bằng IPv4 127.0.0.1 trên database mới hospital_http_test. Kiểm tra biên dịch JSP, role/session/CSRF, đầy đủ luồng bệnh viện, upload multipart PNG, download đúng nội dung, chặn bệnh nhân khác tải tệp/hồ sơ/đơn, không sửa kết quả đã duyệt, PDF đơn/phiếu chỉ định, chặn kê đơn khi còn chờ xét nghiệm, tìm thuốc, bộ lọc loại chi phí và báo cáo, Excel hai sheet (parse toàn bộ XML)/PDF.
 
-**59 kiểm tra HTTP qua trên Tomcat đang chạy.** Script `scripts/smoke_http.py` xác nhận:
+Đã quan sát giao diện đăng nhập và dashboard/bệnh án bác sĩ bằng trình duyệt; kiểm tra bố cục desktop và màn hình nhỏ. Các file kết quả chi tiết tạm nằm trong target/surefire-reports, target/http-smoke-results.txt và target/schema-validation.txt, không commit dữ liệu runtime.
 
-- Chưa login được chuyển về login; bệnh nhân không được xem báo cáo (403); CSRF sai bị chặn (403); logout hủy quyền truy cập.
-- Các JSP login, dashboard, search, appointments, reception, queue, schedules, emr, prescription, billing, lab, feedback, services và reports biên dịch và trả trang thành công.
-- Luồng POST thực tế từ đặt lịch → check-in → gọi lượt khám → lưu chẩn đoán → chỉ định → tiền mặt → kết quả → đơn thuốc → đóng bệnh án → đánh giá.
-- Download `.xlsx` có chữ ký ZIP `PK`; download `.pdf` có chữ ký `%PDF`; nội dung báo cáo doanh thu có loại chi phí thực tế đã thu.
-- Nội dung user nhập được escape khi hiển thị qua `c:out`.
+## Phạm vi chưa được xác minh ngoài hệ thống
 
-Đã xem giao diện login bằng trình duyệt và xác nhận tiếng Việt, form và footer hiển thị đúng. Log HTTP từng bước nằm ở `target/http-smoke-results.txt` sau khi tự chạy script; kết quả Surefire nằm ở `target/surefire-reports`.
-
-## Chưa xác nhận bằng môi trường ngoài
-
-### Hồi quy phiên đăng nhập — 27/10/2026
-
-Đã bổ sung và chạy thành công 7 test cho SecurityFilter, cùng 6 unit test ban đầu (13 test qua, 0 lỗi). Form POST hết hạn khi chưa đăng nhập được chuyển bằng HTTP 303 sang GET trang login mới; dữ liệu cũ không được thực thi lại. Khi đang đăng nhập, POST sai CSRF vẫn bị chặn 403 nhưng hiển thị trang lỗi của ứng dụng. Form login/logout cũ ở tab khác giữ phiên đang đăng nhập và đưa về dashboard. Kiểm tra role vẫn áp dụng sau khi token hợp lệ.
-
-## Tích hợp ngoài chưa xác nhận
-
-- Chưa có tài khoản merchant VNPay để thử giao dịch sandbox với nhà cung cấp và đối soát IPN thật. Unit test ký HMAC không thay thế kiểm thử tích hợp VNPay.
-- Chưa có SMTP để xác nhận gửi email ra hộp thư thật. Outbox và cấu hình đã có.
-- Chưa kiểm tra tải đồng thời quy mô lớn, nhiều instance, hoặc triển khai public qua HTTPS.
-- Không tuyên bố tất cả chi tiết của SRS đã hoàn tất; backlog và khác biệt với UML có trong `SCOPE.md`.
+Chưa có merchant VNPay hoặc SMTP/pharmacy provider thật nên không tuyên bố đã đối soát thanh toán, gửi email/SMS hoặc kiểm tra tương tác thuốc thực tế. Không benchmark 100 người dùng, không kiểm thử triển khai Azure. Các yêu cầu SRS ngoài phạm vi Nam còn thiếu được nêu trong SCOPE.md; không đánh đồng “29 test qua” với toàn bộ SRS đã hoàn tất.

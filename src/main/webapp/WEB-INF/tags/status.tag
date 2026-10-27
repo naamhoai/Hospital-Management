@@ -1,0 +1,1 @@
+<%@ tag pageEncoding="UTF-8" %><%@ taglib prefix="c" uri="jakarta.tags.core" %><%@ attribute name="value" required="true" type="java.lang.String" %><span class="badge status-${value}"><c:out value="${empty applicationScope.labels[value] ? value : applicationScope.labels[value]}"/></span>

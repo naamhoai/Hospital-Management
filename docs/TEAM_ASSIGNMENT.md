@@ -20,6 +20,6 @@ Mỗi người phụ trách 3 class diagram và 5 sequence như bảng task assi
 
 ## Chia nhánh Git khi bắt đầu dùng repository
 
-Khánh: `feature/khanh-auth-search-feedback`; Tráng: `feature/trang-appointments-billing`; Kiên: `feature/kien-schedules-queue`; Nam: `feature/nam-emr-reports`. Đây là tên gợi ý; chưa tự tạo repository hoặc push lên GitHub.
+Khánh: `feature/khanh-auth-search-feedback`; Tráng: `feature/trang-appointments-billing`; Kiên: `feature/kien-schedules-queue`; Nam: `feature/nam-emr-reports`. Đây là tên gợi ý khi tách nhánh. Bản refactor hiện làm trên nhánh `nam` của repository nhóm.
 
 Mỗi người chạy `mvn test`, demo một luồng thành công và một luồng bị chặn của phần mình trước khi gộp code. Những hạng mục chưa triển khai đủ theo SRS nằm trong `SCOPE.md`, dùng làm backlog tiếp theo.

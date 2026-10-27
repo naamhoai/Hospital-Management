@@ -13,19 +13,20 @@ Bản này là ứng dụng học phần chạy được theo các luồng chín
 | Kiên · CD07 | Tạo ca, ngăn trùng giờ bác sĩ, hủy ca/chủ động thông báo, thay sức chứa trước khi có lịch | Chưa lập lịch tuần tự động, quy tắc chốt thứ Sáu, hợp đồng số ca tối thiểu; ca đã có lịch chưa cho đổi sức chứa để giữ giờ cũ |
 | Kiên · CD08 | Check-in mã lịch/điện thoại, walk-in với bệnh nhân đã có tài khoản, chỉ tiếp nhận hôm nay | Chưa tạo hồ sơ bệnh nhân mới ở quầy, máy quét QR, hoặc chọn phòng ít bận tự động |
 | Kiên · CD09 | Cấp số duy nhất/ngày/phòng, thứ tự ưu tiên, gọi bệnh nhân, chuyển phòng cùng khoa | Chưa có WebSocket/màn hình gọi số công cộng; chuyển phòng vẫn giữ bác sĩ đã phân công; chưa có thao tác skip/requeue |
-| Nam · CD10 | Nhận queueId, kiểm tra bác sĩ, lưu triệu chứng/ICD/chẩn đoán, lịch sử, kê nhiều thuốc, in đơn, tồn kho transaction | Danh mục ICD chỉ có vài mã demo; chưa có tương tác thuốc hoặc PharmacyClient thật; chưa có hủy/hoàn kho cho đơn chưa trả |
-| Nam · CD11 | Chỉ định dịch vụ đang hoạt động, giữ giá, nhập kết quả sau PAID, duyệt khóa kết quả | Chưa tải file nhị phân; nhận URL HTTPS. Chưa có luồng trưởng khoa hủy kết quả đã duyệt |
-| Nam · CD12 | Lưu lượng, tỷ lệ hoàn tất/hủy/vắng, doanh thu PAID theo ngày/khoa/loại/phương thức, biểu đồ tỷ lệ, Excel/PDF | Chưa lọc từng serviceId/departmentId hoặc group theo tháng/quý; PDF dùng chữ không dấu, Excel giữ Unicode |
+| Nam · CD10 | Domain/request Java Beans đúng CD10; queue context, chẩn đoán/ICD/lịch sử; kê nhiều dòng, giá chụp, tồn kho transaction, PDF đơn có Unicode; bệnh nhân xem đơn của mình | Danh mục ICD mặc định chỉ có mã demo. Adapter PharmacyClient cần nhà cung cấp theo hợp đồng; chưa xác nhận tích hợp tương tác thuốc thực tế. Chưa có hủy/hoàn kho đơn đã phát hành |
+| Nam · CD11 | ClinicalOrderRequest, typed DAO; chỉ định/hủy trước thanh toán và trước lập hóa đơn; kết quả sau PAID, duyệt khóa; tải PDF/PNG/JPEG 5 MB; tải xuống kiểm tra quyền; email outbox báo có kết quả | Chưa có quy trình trưởng khoa thu hồi kết quả đã duyệt. URL ngoài cần HTTPS; hệ thống không sao chép nội dung URL ngoài về máy chủ |
+| Nam · CD12 | ReportFilter; PatientFlowReport/RevenueReport/ChartDataPoint; lọc ngày/khoa/dịch vụ chỉ định/phương thức; DAY/MONTH/QUARTER; số liệu PAID; biểu đồ, bảng, Excel hai sheet, PDF Unicode; kết nối đọc dữ liệu | Tổng hợp trực tiếp khi truy vấn, chưa có kho tổng hợp theo đêm. Bộ lọc serviceId hiện áp dụng chỉ định cận lâm sàng; không gán giả serviceId cho thuốc hoặc phí khám |
 
-## Các quyết định cần đồng bộ UML
+## Quyết định triển khai và điểm báo cáo cần nhóm thống nhất
 
-- Service nhận `AuthUser` để kiểm tra quyền ngoài các request nghiệp vụ. Danh sách JOIN dùng Map projection, các request/item DTO dùng Java record; chưa tạo đủ 17 Java Bean trong mục 3.13.
-- Thống nhất DAO thay vì Repository trong code mới. Các luồng trong tài liệu cũ còn dùng tên Repository cần cập nhật khi nhóm chốt source.
-- EMRService gọi `QueueContextPort.getContext(queueId)` như CD10, không để EMRController tự xác thực dữ liệu hàng đợi.
-- QueueService tạo bệnh án OPEN khi gọi bệnh nhân; xử lý được trường hợp ban đầu chưa có bệnh án, vốn sequence SQ16 cũ chưa thể hiện.
-- Database thêm `medical_record.queue_id`, bảng ICD, chụp giá, invoice_line, payment_attempt, outbox và audit để các luồng vận hành được. Schema có FK, UNIQUE và CHECK; không sửa ngầm file báo cáo của nhóm.
-- Thuốc trừ kho khi phát hành đơn. Bệnh án đóng khi các chỉ định đã hoàn tất; chi phí thuốc có thể được thu sau đó.
-- Lịch hẹn nhiều đợt trong cùng một ca có giờ khác nhau; khóa dòng ca bảo đảm hai giao dịch không cấp cùng giờ. Nhiều ca cùng bác sĩ được kiểm tra trùng khi tạo qua Service.
+- MVC Layered: Filter → Servlet → Service → DAO → MySQL, Servlet → JSP. SQL đã tách khỏi Controller/Service/listener. `Database` thuộc `util`, quản lý connection/transaction; DAO map dữ liệu thành Java Bean.
+- Có đủ 17 entity Java Bean của 3.13 và Room của ERD. Projection danh sách JOIN dùng Map; `DiagnosisRequest`, `PrescriptionRequest`, `ClinicalOrderRequest`, `ReportFilter` là Java Bean. `AuthUser` là session principal, `PrescriptionItem` chỉ là adapter tương thích test cũ.
+- CD10 đặt `QueueContextPort.getContext` tại Service; SQ16 cũ đặt `verifyQueueContext` tại Controller. Code chọn ranh giới CD10 để validation dùng lại được; không sửa ngầm báo cáo. SQ16 cũng chưa thể hiện tạo bệnh án lần đầu: QueueService tạo draft OPEN khi gọi bệnh nhân.
+- `medical_record` không thêm queue_id. EMR nhận queueId rồi JOIN qua appointment_id. Draft có diagnosis chuỗi rỗng để thỏa NN; chỉ định/kê đơn/kết thúc yêu cầu chẩn đoán đã lưu thực sự.
+- Schema nền có 18 bảng nghiệp vụ, 5 bảng kỹ thuật tách riêng. File migration cho bản cũ giữ dữ liệu và các cột BIGINT cũ; schema mới dùng INT theo SDS. Chi tiết trường/kiểu và phần mở rộng trong DESIGN_TRACEABILITY.md.
+- MySQL theo yêu cầu đã chốt với người dùng; báo cáo đang ghi kiểu SQL Server (NVARCHAR(MAX)). Chuyển sang VARCHAR/TEXT với utf8mb4, giữ domain/quan hệ. SRS bảng công nghệ ghi SQL Server và một số CD/SQ nhắc Redis/JWT, trong khi mô tả architecture là Servlet/JSP + session. Bản này sử dụng HttpSession; không tuyên bố đã dùng Redis/JWT.
+- Bệnh án đóng sau khi chỉ định hoàn tất hoặc hủy. Chi phí chưa thu được tự lập/cộng vào hóa đơn cuối lượt; tổng doanh thu chỉ gồm hóa đơn PAID. Không tự đánh dấu thanh toán khi đóng bệnh án.
+- UI hiện hỗ trợ bệnh nhân xem hồ sơ/đơn/kết quả/hóa đơn. Chức năng của các thành viên khác vẫn cần hoàn thiện những mục SRS ghi ở các hàng phía trên; bản refactor này không đồng nghĩa toàn bộ SRS đã nghiệm thu.
 
 ## Triển khai và tích hợp
 
