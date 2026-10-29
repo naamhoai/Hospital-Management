@@ -26,12 +26,12 @@ class Client:
         if match:self.csrf=match[1]
         checks.append(f"PASS {req.get_method()} {path}: {status}")
         return response,text,body
-    def multipart(self,path,fields,filename,content,status=302):
+    def multipart(self,path,fields,filename,content,status=302,file_field="attachment",content_type="image/png"):
         boundary='HospitalBoundary'+uuid.uuid4().hex
         parts=[]
         for key,value in {'csrf':self.csrf,**fields}.items():
             parts.append(('--'+boundary+'\r\nContent-Disposition: form-data; name="'+key+'"\r\n\r\n'+str(value)+'\r\n').encode())
-        parts.append(('--'+boundary+'\r\nContent-Disposition: form-data; name="attachment"; filename="'+filename+'"\r\nContent-Type: image/png\r\n\r\n').encode()+content+b'\r\n')
+        parts.append(('--'+boundary+'\r\nContent-Disposition: form-data; name="'+file_field+'"; filename="'+filename+'"\r\nContent-Type: '+content_type+'\r\n\r\n').encode()+content+b'\r\n')
         parts.append(('--'+boundary+'--\r\n').encode())
         req=urllib.request.Request(BASE+path,data=b''.join(parts),headers={'Content-Type':'multipart/form-data; boundary='+boundary})
         try:response=self.opener.open(req,timeout=30)
@@ -83,9 +83,15 @@ def run():
     _,_,data=doctor.request('/clinical-orders?id='+order_pdf);assert data.startswith(b'%PDF')
     doctor.request('/prescriptions',{'recordId':record,'medicationId':['1'],'quantity':['1'],'dosage':['Demo before results'],'advice':''},422)
     doctor.request(emr_path+'&medicationKeyword=DEMO')
+    # Add a temporary unpaid order; cancellation must remove its already-invoiced charge.
+    doctor.request('/clinical-orders',{'recordId':record,'queueId':queue,'serviceId':['4'],'instructions':'Temporary demo order'},302)
+    _,text,_=doctor.request(emr_path)
+    temporary_order=re.search(r'/clinical-orders\?id=(\d+)',text).group(1)
     cashier=Client();cashier.login("cashier");cashier.request("/billing")
     response,_,_=cashier.request("/billing",{"action":"create","recordId":record},302)
     invoice_path=response.headers["Location"].split("/hospital",1)[1];_,text,_=cashier.request(invoice_path);invoice=field(text,"invoiceId")
+    doctor.request('/clinical-orders',{'action':'cancel','orderId':temporary_order,'queueId':queue},302)
+    _,bill,_=cashier.request(invoice_path);assert re.search(r'Tổng cộng:\s*360[,.]?000(?:[,.]00)?\s*VND',bill), re.search(r'Tổng cộng:.*',bill).group(0)
     cashier.request("/billing",{"action":"cash","invoiceId":invoice},302)
     cashier.request(invoice_path)
     lab=Client();lab.login("lab");_,text,_=lab.request("/lab")

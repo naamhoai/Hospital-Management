@@ -24,6 +24,8 @@ public class SecurityFilter implements Filter {
           Map.entry("/clinical-orders", Set.of("DOCTOR")),
           Map.entry("/attachments", Set.of("DOCTOR", "LAB_TECHNICIAN", "PATIENT")),
           Map.entry("/lab", Set.of("LAB_TECHNICIAN")),
+          Map.entry("/result-recalls", Set.of("DOCTOR", "LAB_TECHNICIAN", "DEPARTMENT_HEAD")),
+          Map.entry("/clinical-updates", Set.of("DOCTOR")),
           Map.entry("/reports", Set.of("MANAGER", "ADMIN")));
 
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)

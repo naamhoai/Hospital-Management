@@ -44,4 +44,12 @@ public class PaymentAttemptDAO {
             + " created_at>DATE_SUB(NOW(),INTERVAL 15 MINUTE) ORDER BY created_at DESC LIMIT 1",
         values);
   }
+
+  public void expirePendingAttempts(Connection c, int invoiceId) throws SQLException {
+    Jdbc.update(
+        c,
+        "UPDATE payment_attempt SET status='EXPIRED' WHERE invoice_id=? AND status='PENDING' AND"
+            + " created_at<=DATE_SUB(NOW(),INTERVAL 15 MINUTE)",
+        invoiceId);
+  }
 }

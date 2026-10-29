@@ -28,17 +28,7 @@ public class LabResultController extends BaseController {
     result.setResultData(p(r, "resultData"));
     result.setConclusion(p(r, "conclusion"));
     result.setFileUrl(p(r, "fileUrl"));
-    Part part =
-        r.getContentType() != null && r.getContentType().startsWith("multipart/")
-            ? r.getPart("attachment")
-            : null;
-    UploadData upload =
-        part == null || part.getSize() == 0
-            ? null
-            : new UploadData(
-                part.getSubmittedFileName(),
-                part.getContentType(),
-                part.getInputStream().readAllBytes());
+    UploadData upload = upload(r, "attachment");
     new ClinicalService(user(r)).recordTestResult(Actors.id(id(r, "orderId")), result, upload);
     redirect(
         r,

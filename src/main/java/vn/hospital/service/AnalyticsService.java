@@ -18,6 +18,7 @@ public class AnalyticsService {
     this.actor = actor;
   }
 
+  /** Giới hạn khoảng ngày và chỉ chấp nhận các kiểu nhóm/bộ lọc đã định nghĩa. */
   public void validateFilter(ReportFilter f) {
     Checks.require(
         f != null
@@ -47,6 +48,7 @@ public class AnalyticsService {
     Checks.require(f.getServiceId() == null || f.getServiceId() > 0, "Mã dịch vụ không hợp lệ.");
   }
 
+  /** Chọn loại báo cáo; phần này chỉ đọc dữ liệu và không thay đổi hồ sơ khám. */
   public ReportData generateReport(String type, ReportFilter filter) {
     Actors.require(actor, "MANAGER", "ADMIN");
     validateFilter(filter);
@@ -89,6 +91,7 @@ public class AnalyticsService {
     return report;
   }
 
+  /** Mẫu số bằng 0 trả về 0%; dùng BigDecimal để tính tỷ lệ có kiểm soát làm tròn. */
   private BigDecimal rate(Integer count, Integer total) {
     return total == null || total == 0
         ? BigDecimal.ZERO
@@ -97,6 +100,7 @@ public class AnalyticsService {
             .divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
   }
 
+  /** Dùng cùng bộ lọc với màn hình để số liệu trong file khớp số liệu đang xem. */
   public File exportReport(String type, ReportFilter filter, String format) {
     ReportData report = generateReport(type, filter);
     return switch (format.toLowerCase(Locale.ROOT)) {

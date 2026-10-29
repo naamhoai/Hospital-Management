@@ -82,7 +82,9 @@ public class InvoiceDAO {
 
   public Map<String, Object> findPendingRows(Connection c, Object... values) throws SQLException {
     return Jdbc.one(
-        c, "SELECT invoice_id FROM invoice WHERE record_id=? AND status='UNPAID'", values);
+        c,
+        "SELECT invoice_id FROM invoice WHERE record_id=? AND status='UNPAID' FOR UPDATE",
+        values);
   }
 
   public java.util.List<java.util.Map<String, Object>> findInvoiceLines(Object... values) {
@@ -134,5 +136,46 @@ public class InvoiceDAO {
                 + " FROM invoice_line l WHERE l.source_type='MEDICATION' AND l.source_id=pd.id)))",
             record)
         != null;
+  }
+
+  public vn.hospital.model.Invoice lockForClinicalOrder(Connection c, int recordId, int orderId)
+      throws SQLException {
+    // Khóa hóa đơn trước dòng phí; đọc hiện tại để thấy hóa đơn vừa được lập ở giao dịch khác.
+    Jdbc.list(
+        c,
+        "SELECT invoice_id FROM invoice WHERE record_id=? ORDER BY invoice_id FOR UPDATE",
+        recordId);
+    var row =
+        Jdbc.one(
+            c,
+            "SELECT invoice_id FROM invoice_line WHERE source_type='ORDER' AND source_id=? FOR"
+                + " UPDATE",
+            orderId);
+    if (row == null) return null;
+    long invoiceId = ((Number) row.get("invoice_id")).longValue();
+    return BeanMapper.map(findById(c, invoiceId), vn.hospital.model.Invoice.class);
+  }
+
+  public void removeClinicalLine(Connection c, int invoiceId, int orderId) throws SQLException {
+    Jdbc.update(
+        c,
+        "DELETE FROM invoice_line WHERE invoice_id=? AND source_type='ORDER' AND source_id=?",
+        invoiceId,
+        orderId);
+  }
+
+  public void recalculateAfterCancellation(Connection c, int invoiceId) throws SQLException {
+    Jdbc.update(
+        c,
+        "UPDATE invoice SET total_amount=(SELECT COALESCE(SUM(quantity*unit_price),0) FROM"
+            + " invoice_line WHERE invoice_id=?) WHERE invoice_id=? AND status='UNPAID'",
+        invoiceId,
+        invoiceId);
+    Jdbc.update(
+        c,
+        "UPDATE invoice SET status='CANCELLED' WHERE invoice_id=? AND status='UNPAID' AND NOT"
+            + " EXISTS(SELECT 1 FROM invoice_line WHERE invoice_id=?)",
+        invoiceId,
+        invoiceId);
   }
 }

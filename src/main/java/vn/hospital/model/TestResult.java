@@ -61,4 +61,14 @@ public class TestResult {
   public void setFileUrl(String value) {
     this.fileUrl = value;
   }
+
+  private String status = "APPROVED";
+
+  public String getStatus() {
+    return status;
+  }
+
+  public void setStatus(String value) {
+    status = value;
+  }
 }

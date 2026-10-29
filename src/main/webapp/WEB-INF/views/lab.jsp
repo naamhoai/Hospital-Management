@@ -17,6 +17,7 @@
 <label for="lab-status">Trạng thái thực hiện</label>
 <select id="lab-status" name="status">
 <option value="">Tất cả</option>
+<option value="RESULT_RECALLED" ${param.status=='RESULT_RECALLED'?'selected':''}>Cần cập nhật sau thu hồi</option>
 <option value="PENDING" ${param.status=='PENDING'?'selected':''}>Đang chờ</option>
 <option value="COMPLETED" ${param.status=='COMPLETED'?'selected':''}>Hoàn tất</option>
 <option value="CANCELLED" ${param.status=='CANCELLED'?'selected':''}>Đã hủy</option>
@@ -67,7 +68,7 @@
 </p>
 <c:choose>
 <c:when test="${not empty selectedOrder.result}">
-<div class="notice">Kết quả đã duyệt và khóa chỉnh sửa.</div>
+<div class="notice">Kết quả đã duyệt và khóa chỉnh sửa.</div><details class="recall-form"><summary>Đề nghị thu hồi kết quả</summary><form method="post" action="${ctx}/result-recalls"><input type="hidden" name="csrf" value="${sessionScope.csrf}"><input type="hidden" name="action" value="request"><input type="hidden" name="resultId" value="${selectedOrder.result.resultId}"><input type="hidden" name="orderId" value="${selectedOrder.orderId}"><label>Lý do cần thu hồi *</label><textarea name="reason" required maxlength="255" aria-label="Lý do thu hồi kết quả"></textarea><button class="secondary">Gửi đề nghị cho trưởng khoa</button></form></details>
 <h3>Dữ liệu kết quả</h3>
 <p class="pre-line">
 <c:out value="${selectedOrder.result.resultData}"/>
@@ -87,7 +88,8 @@
 </c:choose>
 </c:if>
 </c:when>
-<c:when test="${selectedOrder.paymentStatus=='PAID' && selectedOrder.status=='PENDING'}">
+<c:when test="${selectedOrder.paymentStatus=='PAID' && (selectedOrder.status=='PENDING' || selectedOrder.status=='RESULT_RECALLED')}">
+<c:if test="${selectedOrder.status=='RESULT_RECALLED'}"><div class="notice warning">Kết quả cũ đã được thu hồi. Nhập bản thay thế sau khi kiểm tra lại; lịch sử cũ vẫn được lưu.</div></c:if>
 <form method="post" enctype="multipart/form-data" data-confirm="Duyệt kết quả này? Sau khi duyệt sẽ không thể chỉnh sửa.">
 <input type="hidden" name="csrf" value="${sessionScope.csrf}">
 <input type="hidden" name="orderId" value="${selectedOrder.orderId}">
@@ -112,6 +114,7 @@
 <div class="notice warning">${selectedOrder.status=='CANCELLED'?'Chỉ định đã hủy.':'Chỉ định chưa thanh toán. Vui lòng chờ xác nhận từ thu ngân.'}</div>
 </c:otherwise>
 </c:choose>
+<c:if test="${not empty recallHistory}"><details><summary>Lịch sử đề nghị thu hồi (${recallHistory.size()})</summary><c:forEach items="${recallHistory}" var="recall"><article class="result-item"><strong>Phiếu #${recall.requestId}</strong> <ui:status value="${recall.status}"/><p><c:out value="${recall.reason}"/></p><p>Ý kiến: <c:out value="${recall.reviewNote}"/></p><p>Người xử lý: <c:out value="${recall.reviewerName}"/></p><details><summary>Bản kết quả gốc</summary><p class="pre-line"><c:out value="${recall.resultData}"/></p><p><c:out value="${recall.conclusion}"/></p></details></article></c:forEach></details></c:if>
 </c:otherwise>
 </c:choose>
 </section>

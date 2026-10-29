@@ -48,6 +48,7 @@
 <strong>
 <c:out value="${o.service.name}"/>
 </strong> <ui:status value="${o.status}"/>
+<c:if test="${o.status=='RESULT_RECALLED'}"><div class="notice warning">Kết quả đang được kiểm tra và cập nhật. Bản đã thu hồi không còn hiệu lực.</div></c:if>
 <c:if test="${not empty o.result}">
 <p class="pre-line">
 <c:out value="${o.result.resultData}"/>

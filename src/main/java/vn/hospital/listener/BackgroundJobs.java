@@ -7,6 +7,8 @@ import java.util.concurrent.*;
 @WebListener
 public class BackgroundJobs implements ServletContextListener {
   private ScheduledExecutorService executor;
+  private final vn.hospital.service.MaintenanceService maintenance =
+      new vn.hospital.service.MaintenanceService();
 
   public void contextInitialized(ServletContextEvent event) {
     executor =
@@ -19,7 +21,7 @@ public class BackgroundJobs implements ServletContextListener {
     executor.scheduleWithFixedDelay(
         () -> {
           try {
-            new vn.hospital.service.MaintenanceService().run();
+            maintenance.run();
           } catch (Exception e) {
             event.getServletContext().log("Background job could not run", e);
           }

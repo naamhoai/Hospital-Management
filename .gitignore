@@ -8,3 +8,5 @@ target/
 .project
 .settings/
 src/main/resources/application-local.properties
+__pycache__/
+*.pyc

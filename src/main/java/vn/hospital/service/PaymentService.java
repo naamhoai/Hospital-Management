@@ -52,6 +52,10 @@ public class PaymentService {
               amount.compareTo((BigDecimal) a.get("amount")) == 0
                   && amount.compareTo((BigDecimal) i.get("total_amount")) == 0,
               "Số tiền VNPay không khớp hóa đơn.");
+          Checks.require(
+              "PENDING".equals(a.get("status")) || "SUCCESS".equals(a.get("status")),
+              "Giao dịch đã hết hiệu lực hoặc hóa đơn đã điều chỉnh; cần đối soát với cổng thanh"
+                  + " toán.");
           boolean success =
               "00".equals(params.get("vnp_ResponseCode"))
                   && "00".equals(params.get("vnp_TransactionStatus"));

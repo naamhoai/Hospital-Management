@@ -23,6 +23,7 @@ public class ClinicalService {
         .findAllActive().stream().filter(s -> !"CONSULTATION".equals(s.getCategory())).toList();
   }
 
+  /** Tạo chỉ định sau chẩn đoán sơ bộ; chụp đơn giá tại thời điểm bác sĩ chỉ định. */
   public List<ClinicalOrder> createClinicalOrders(ClinicalOrderRequest request) {
     Actors.require(actor, "DOCTOR");
     Checks.require(
@@ -70,34 +71,36 @@ public class ClinicalService {
           for (var order : orders)
             AuditDAO.record(
                 c, actor.getUserId(), "ORDER_TEST", "clinical_order", order.getOrderId());
-          return dao.findByRecordId(c, record.getRecordId()).stream()
-              .filter(
-                  o ->
-                      orders.stream()
-                          .anyMatch(created -> created.getOrderId().equals(o.getOrderId())))
-              .toList();
+          List<ClinicalOrder> savedOrders = new ArrayList<>();
+          for (ClinicalOrder order : orders) {
+            savedOrders.add(dao.findById(c, order.getOrderId()));
+          }
+          return savedOrders;
         });
   }
 
-  public Boolean cancelOrder(Integer id) {
+  /** Hủy chỉ định chưa trả tiền; hóa đơn và chỉ định cùng thành công hoặc cùng rollback. */
+  public Boolean cancelOrder(Integer orderId) {
     Actors.require(actor, "DOCTOR");
     return Database.tx(
         c -> {
-          var dao = new ClinicalOrderDAO();
-          Integer recordId = dao.findRecordId(c, id);
+          var orders = new ClinicalOrderDAO();
+          Integer recordId = orders.findRecordId(c, orderId);
           Checks.require(recordId != null, "Không tìm thấy chỉ định.");
           EMRService.editable(new MedicalRecordDAO().findById(c, recordId), actor, true);
-          ClinicalOrder order = dao.findById(c, id);
-          Checks.require(order != null, "Không tìm thấy chỉ định.");
+          // Giữ cùng thứ tự khóa với thu ngân: bệnh án -> hóa đơn -> chỉ định.
+          Invoice invoice = new InvoiceDAO().lockForClinicalOrder(c, recordId, orderId);
+          ClinicalOrder order = orders.findById(c, orderId);
           Checks.require(
-              "PENDING".equals(order.getStatus()) && !"PAID".equals(order.getPaymentStatus()),
-              "Chỉ hủy chỉ định chưa thanh toán, chưa thực hiện.");
+              order != null && Set.of("PENDING", "RESULT_RECALLED").contains(order.getStatus()),
+              "Chỉ hủy chỉ định chưa thực hiện.");
           Checks.require(
-              !dao.isBilled(c, id),
-              "Chỉ định đã có trên hóa đơn. Cần thu ngân xử lý trước khi hủy.");
-          boolean result = dao.updateExecutionStatus(c, id, "CANCELLED");
-          AuditDAO.record(c, actor.getUserId(), "CANCEL_TEST", "clinical_order", id);
-          return result;
+              !"PAID".equals(order.getPaymentStatus()),
+              "Chỉ định đã thanh toán, không thể hủy trực tiếp.");
+          new BillingService().removeUnpaidClinicalCharge(c, invoice, orderId, actor.getUserId());
+          orders.updateExecutionStatus(c, orderId, "CANCELLED");
+          AuditDAO.record(c, actor.getUserId(), "CANCEL_TEST", "clinical_order", orderId);
+          return true;
         });
   }
 
@@ -105,6 +108,7 @@ public class ClinicalService {
     return recordTestResult(orderId, result, null);
   }
 
+  /** Chỉ duyệt chỉ định đã thanh toán; khóa dòng chỉ định để tránh hai lần duyệt đồng thời. */
   public TestResult recordTestResult(Integer orderId, TestResult result, UploadData upload) {
     Actors.require(actor, "LAB_TECHNICIAN");
     Checks.require(result != null, "Thiếu dữ liệu kết quả.");
@@ -118,7 +122,8 @@ public class ClinicalService {
         "URL kết quả phải dùng HTTPS và tối đa 255 ký tự.");
     Checks.require(
         upload == null || url.isEmpty(), "Chỉ chọn tải tệp hoặc nhập URL, không dùng cả hai.");
-    String[] stored = {null};
+    AttachmentStorage storage = new AttachmentStorage();
+    String storedFile = upload == null ? null : storage.save(upload);
     try {
       return Database.tx(
           c -> {
@@ -127,13 +132,13 @@ public class ClinicalService {
             Checks.require(
                 order != null
                     && "PAID".equals(order.getPaymentStatus())
-                    && "PENDING".equals(order.getStatus()),
+                    && Set.of("PENDING", "RESULT_RECALLED").contains(order.getStatus()),
                 "Chỉ duyệt kết quả cho chỉ định đã thanh toán, chưa hoàn tất.");
             Checks.require(
                 new TestResultDAO().findByOrderId(c, orderId) == null,
                 "Kết quả đã duyệt, không được sửa.");
-            if (upload != null) stored[0] = new AttachmentStorage().save(upload);
-            result.setFileUrl(upload == null ? url : stored[0]);
+
+            result.setFileUrl(upload == null ? url : storedFile);
             result.setOrderId(orderId);
             result.setTechnicianId(Actors.id(actor.getUserId()));
             TestResult saved = new TestResultDAO().save(c, result);
@@ -154,7 +159,7 @@ public class ClinicalService {
             return saved;
           });
     } catch (RuntimeException e) {
-      new AttachmentStorage().deleteOwn(stored[0]);
+      storage.deleteOwn(storedFile);
       throw e;
     }
   }
@@ -162,7 +167,8 @@ public class ClinicalService {
   public Map<String, Object> labWorkspace(String keyword, String status, Integer selected) {
     Actors.require(actor, "LAB_TECHNICIAN");
     Checks.require(
-        Set.of("", "PENDING", "COMPLETED", "CANCELLED").contains(status) && keyword.length() <= 100,
+        Set.of("", "PENDING", "COMPLETED", "CANCELLED", "RESULT_RECALLED").contains(status)
+            && keyword.length() <= 100,
         "Bộ lọc không hợp lệ.");
     return Database.read(
         c -> {
@@ -173,6 +179,7 @@ public class ClinicalService {
             Checks.require(order != null, "Không tìm thấy chỉ định.");
             MedicalRecord record = new MedicalRecordDAO().findByIdRead(c, order.getRecordId());
             page.put("selectedOrder", order);
+            page.put("recallHistory", new ResultRecallDAO().findByOrder(c, selected));
             page.put("patient", new MedicalRecordDAO().patientProfile(c, record.getPatientId()));
           }
           return page;
@@ -184,7 +191,9 @@ public class ClinicalService {
     return Database.read(
         c -> {
           TestResult result = new TestResultDAO().findById(c, resultId);
-          Checks.require(result != null, "Không tìm thấy kết quả.");
+          Checks.require(
+              result != null && "APPROVED".equals(result.getStatus()),
+              "Kết quả không còn hiệu lực để tải xuống.");
           ClinicalOrder order = new ClinicalOrderDAO().findByIdRead(c, result.getOrderId());
           MedicalRecord record = new MedicalRecordDAO().findByIdRead(c, order.getRecordId());
           Checks.require(

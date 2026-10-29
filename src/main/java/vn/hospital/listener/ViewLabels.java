@@ -80,6 +80,11 @@ public class ViewLabels implements ServletContextListener {
     labels.put("active_slot", "Giờ đã giữ");
     String[][] states = {
       {"ADMIN", "Quản trị"},
+      {"DEPARTMENT_HEAD", "Trưởng khoa"},
+      {"RESULT_RECALLED", "Kết quả đã thu hồi"},
+      {"RECALLED", "Đã thu hồi"},
+      {"APPROVED", "Đã phê duyệt"},
+      {"REJECTED", "Đã từ chối"},
       {"MANAGER", "Quản lý"},
       {"DOCTOR", "Bác sĩ"},
       {"PATIENT", "Bệnh nhân"},
