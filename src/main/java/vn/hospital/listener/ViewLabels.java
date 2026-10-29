@@ -113,6 +113,7 @@ public class ViewLabels implements ServletContextListener {
       {"LAB", "Xét nghiệm"},
       {"IMAGING", "Chẩn đoán hình ảnh"},
       {"MEDICATION", "Thuốc"},
+      {"ORDER", "Cận lâm sàng"},
       {"STANDARD", "Thông thường"},
       {"ELDERLY", "Người cao tuổi"},
       {"EMERGENCY", "Cấp cứu"},

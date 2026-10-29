@@ -6,3 +6,4 @@ target
 **/__pycache__
 **/*.pyc
 src/main/resources/application-local.properties
+frontend/node_modules

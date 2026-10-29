@@ -1,5 +1,19 @@
 # Kết quả kiểm tra — 29/10/2026
 
+## Bản React + React Bootstrap hiện tại
+
+- Clean build Maven đã chạy npm ci, Vite build và đóng gói React trong hospital.war; WAR không còn các trang JSP/JSTL cũ.
+- **49 test Java/MySQL qua**, không lỗi/không bỏ qua: Core 6, SecurityFilter 10, DesignContract 7, ClinicalProgress 3, FrontendResponse 2, PaymentReturn 3, NamWorkflow 6, Workflow 3, NamRevision 9.
+- **11 test React qua**: form/CSRF, giữ dữ liệu khi lỗi, nhiều dòng thuốc, chặn submit trùng, render text an toàn, khóa kê đơn, xử lý lỗi API, tên View đơn thuốc, URL /hospital/ và context ROOT.
+- **109 kiểm tra HTTP luồng chính qua** trên database giả lập riêng: luồng khám đầy đủ, tệp/PDF/Excel, phân quyền, CSRF, thanh toán trùng, callback HTML/API/IPN, thêm/sửa dịch vụ, tạo/đổi sức chứa/hủy ca và đặt/đổi/hủy lịch.
+- **34 kiểm tra HTTP thu hồi qua** sau sửa JOIN: đề nghị, duyệt, đọc lại biên bản/tệp gốc, chặn tệp mất hiệu lực, nhập bản thay thế, danh sách không trùng và thông báo. Tổng HTTP: **143**.
+- Đã thao tác trên trình duyệt React: đăng nhập/đổi vai trò, đặt lịch, check-in, gọi lượt, lưu chẩn đoán, tạo chỉ định, thanh toán tiền mặt demo, nhập kết quả và kê nhiều thuốc. Trang đơn thuốc đã được kiểm tra lại sau sửa ánh xạ tên View.
+- Runtime đã chuyển lại database chính **hospital**, cổng HTTP **3000**. GET /login và /api/search trả 200; API đọc được 4 dịch vụ. Các luồng ghi kiểm thử HTTP chạy trên database riêng, không chạy trên database chính.
+- Rà trước Git: build thành công từ bản sao chỉ có source đưa lên Git, không có application-local.properties/node_modules. npm audit báo 0 lỗ hổng. WAR cuối có một JS bundle, không có JSP cũ hoặc application-local.properties. Docker Compose config hợp lệ; Docker Engine đang tắt nên chưa chạy kiểm thử container/MySQL 8.4.
+- Đã sửa xử lý callback VNPay hai lần khi React tải dữ liệu, điều hướng /hospital/ và cấu hình loại file local khỏi WAR. Chi tiết ở PRE_GIT_CHECK.md.
+
+Hướng dẫn frontend và những chỗ báo cáo/sơ đồ cần đổi từ JSP sang React nằm trong REACT_FRONTEND.md. Các mục dưới đây ghi lại kết quả bản Servlet/JSP trước khi chuyển frontend.
+
 ## Môi trường thực tế
 
 Windows; JDK 21.0.11 biên dịch `--release 17`; Maven 3.9.11; Apache Tomcat 10.1.61; MySQL **9.3.0 cài trên máy** (cổng test riêng 33307). Cấu hình dự án/Compose hướng tới Java 17+, Tomcat 10.1 và MySQL 8.4. Chưa chạy container MySQL 8.4 trong lần kiểm tra này; không coi kiểm tra 9.3 là chứng nhận riêng cho 8.4.
@@ -41,3 +55,11 @@ Ngày 29/10: thử toàn bộ schema mới **01 → 04 → 02 → 05 → 06**, x
 ## Phạm vi chưa được xác minh ngoài hệ thống
 
 Chưa có merchant VNPay hoặc SMTP/pharmacy provider thật nên không tuyên bố đã đối soát thanh toán, gửi email/SMS hoặc kiểm tra tương tác thuốc thực tế. Không benchmark 100 người dùng, không kiểm thử Azure/PKI/LIS thật. Các yêu cầu còn thiếu ở SCOPE.md; không đánh đồng “41 test qua” với toàn bộ SRS đã hoàn tất.
+
+## Kiểm tra lỗi database của thành viên nhóm — 29/10
+
+Log nhận được: đăng nhập lỗi MySQL 1054 `Unknown column 'u.password' in 'field list'`. Kết nối đã thành công; schema không khớp code.
+
+Đã tái hiện lỗi trên database thử riêng bằng cột password_hash, chạy migration alignment và kiểm tra lại truy vấn đăng nhập của UserDAO. Kiểm tra giữ nguyên toàn bộ user ID/hash, liên kết bệnh án–queue qua appointment, đơn thuốc và kết quả. Thử cả schema đang cập nhật dở (đã đổi tên password, chưa bỏ cột queue), chạy lại migration, rồi áp dụng 05/06 thành 25 bảng. Script kiểm tra schema chỉ đọc cũng chạy thành công. Tổng **8 kiểm tra qua**, gồm HTTP /search của app local trả 200 và dữ liệu bác sĩ.
+
+Chỉ database ngẫu nhiên tạo cho lần thử bị xóa sau khi thử. Không sửa database chính hoặc database trên máy thành viên. Chi tiết tạm: target/db-team-validation.txt. Hướng dẫn gửi cho nhóm: DATABASE_TROUBLESHOOTING.md.
