@@ -6,6 +6,7 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.*;
 import vn.hospital.model.AuthUser;
+import vn.hospital.util.FrontendResponse;
 
 @WebFilter("/*")
 public class SecurityFilter implements Filter {
@@ -39,9 +40,14 @@ public class SecurityFilter implements Filter {
     s.setHeader("Referrer-Policy", "same-origin");
     s.setHeader(
         "Content-Security-Policy",
-        "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; form-action"
-            + " 'self'; frame-ancestors 'none'");
+        "default-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self';"
+            + " img-src 'self' data:; form-action 'self'; frame-ancestors 'none'");
     String path = r.getServletPath();
+    boolean api = path.equals("/api");
+    if (api) {
+      r.setAttribute("hospital.api", true);
+      path = r.getPathInfo() == null ? "" : r.getPathInfo();
+    }
     if (path.startsWith("/assets/")) {
       chain.doFilter(r, s);
       return;
@@ -57,13 +63,27 @@ public class SecurityFilter implements Filter {
       try {
         submitted = r.getParameter("csrf");
       } catch (IllegalStateException e) {
+        if (api) {
+          FrontendResponse.error(r, s, 413, "Tệp đính kèm vượt giới hạn 5 MB.");
+          return;
+        }
         s.setStatus(413);
         r.setAttribute("error", "Tệp đính kèm vượt giới hạn 5 MB. Vui lòng chọn tệp nhỏ hơn.");
-        r.getRequestDispatcher("/WEB-INF/views/error.jsp").forward(r, s);
+        FrontendResponse.shell(r, s);
         return;
       }
       boolean valid = expected instanceof String token && token.equals(submitted);
       if (!valid) {
+        if (api) {
+          FrontendResponse.error(
+              r,
+              s,
+              user == null ? 401 : 403,
+              user == null
+                  ? "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại."
+                  : "Form đã hết hạn. Tải lại trang trước khi thực hiện lại thao tác.");
+          return;
+        }
         if (user == null) {
           // A 303 changes the stale POST into a fresh GET; never replay submitted data.
           s.setStatus(HttpServletResponse.SC_SEE_OTHER);
@@ -80,7 +100,7 @@ public class SecurityFilter implements Filter {
               "error",
               "Form đã hết hạn hoặc được mở trước lần đăng nhập gần nhất. Thao tác chưa được thực"
                   + " hiện; mở lại chức năng từ thanh điều hướng và thử lại.");
-          r.getRequestDispatcher("/WEB-INF/views/error.jsp").forward(r, s);
+          FrontendResponse.shell(r, s);
         }
         return;
       }
@@ -89,11 +109,21 @@ public class SecurityFilter implements Filter {
     if (session.getAttribute("csrf") == null)
       session.setAttribute("csrf", UUID.randomUUID().toString());
     if (!publicPage && user == null) {
+      if (api) {
+        FrontendResponse.error(r, s, 401, "Vui lòng đăng nhập để tiếp tục.");
+        return;
+      }
       s.sendRedirect(r.getContextPath() + "/login");
       return;
     }
     if (ACCESS.containsKey(path) && (user == null || !ACCESS.get(path).contains(user.getRole()))) {
-      s.sendError(403, "Bạn không có quyền truy cập chức năng này.");
+      if (api) {
+        FrontendResponse.error(r, s, 403, "Bạn không có quyền truy cập chức năng này.");
+        return;
+      }
+      s.setStatus(403);
+      r.setAttribute("error", "Bạn không có quyền truy cập chức năng này.");
+      FrontendResponse.shell(r, s);
       return;
     }
     chain.doFilter(r, s);

@@ -1,6 +1,8 @@
 # Hướng dẫn đọc code phần Nam
 
-Bản cập nhật 29/10/2026. Không dùng Spring; vẫn là Servlet/JSP → Service → DAO → MySQL. Comment tiếng Việt tập trung ở quy tắc nghiệp vụ và transaction; getter/setter giữ ngắn.
+Bản cập nhật 29/10/2026. Không dùng Spring; dùng React + React Bootstrap → Servlet API → Service → DAO → MySQL. Comment tiếng Việt tập trung ở quy tắc nghiệp vụ và transaction; getter/setter giữ ngắn.
+
+Frontend theo từng thành viên và thay đổi cần cập nhật trong báo cáo: [REACT_FRONTEND.md](REACT_FRONTEND.md).
 
 ## Nên đọc theo thứ tự
 
@@ -76,7 +78,7 @@ Schema thực thi hiện có **25 bảng**: 18 nghiệp vụ + 5 kỹ thuật c�
 ```mermaid
 sequenceDiagram
     actor Doctor
-    participant View as Consultation JSP
+    participant View as Consultation React View
     participant C as EMRController
     participant S as EMRService
     participant Q as QueueContextPort

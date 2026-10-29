@@ -247,6 +247,12 @@ class NamRevisionTest {
     assertEquals("Kết quả gốc", archived.getResultData());
     assertEquals(
         "Kết quả thay thế", new TestResultDAO().findByOrderId(order.getOrderId()).getResultData());
+    var worklist =
+        Database.read(c -> new ClinicalOrderDAO().worklist(c, order.getOrderId().toString(), ""));
+    assertEquals(
+        1, worklist.size(), "Một chỉ định chỉ hiện một lần dù có nhiều bản kết quả lịch sử");
+    assertEquals(
+        saved.getResultId().longValue(), ((Number) worklist.get(0).get("result_id")).longValue());
     assertEquals(
         2,
         Jdbc.number(

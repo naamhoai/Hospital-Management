@@ -1,6 +1,6 @@
 # Phạm vi bản triển khai
 
-Bản này là ứng dụng học phần chạy được theo các luồng chính của 12 mục Detailed Design, có giao diện JSP và dữ liệu MySQL. Bảng dưới phân biệt phần đã có với yêu cầu trong báo cáo còn cần nhóm phát triển tiếp; không coi đây là bản triển khai bệnh viện thực tế đã nghiệm thu.
+Bản này là ứng dụng học phần chạy được theo các luồng chính của 12 mục Detailed Design, có giao diện React + React Bootstrap và dữ liệu MySQL. Bảng dưới phân biệt phần đã có với yêu cầu trong báo cáo còn cần nhóm phát triển tiếp; không coi đây là bản triển khai bệnh viện thực tế đã nghiệm thu.
 
 | Nhóm | Đã triển khai | Còn cần bổ sung theo báo cáo |
 |---|---|---|
@@ -19,7 +19,7 @@ Bản này là ứng dụng học phần chạy được theo các luồng chín
 
 ## Quyết định triển khai và điểm báo cáo cần nhóm thống nhất
 
-- MVC Layered: Filter → Servlet → Service → DAO → MySQL, Servlet → JSP. SQL đã tách khỏi Controller/Service/listener. `Database` thuộc `util`, quản lý connection/transaction; DAO map dữ liệu thành Java Bean.
+- MVC Layered: React → Filter → Servlet API → Service → DAO → MySQL, Servlet trả JSON cho React. SQL đã tách khỏi Controller/Service/listener. `Database` thuộc `util`, quản lý connection/transaction; DAO map dữ liệu thành Java Bean.
 - Có đủ 17 entity Java Bean của 3.13 và Room của ERD. Projection danh sách JOIN dùng Map; `DiagnosisRequest`, `PrescriptionRequest`, `ClinicalOrderRequest`, `ReportFilter` là Java Bean. `AuthUser` là session principal, `PrescriptionItem` chỉ là adapter tương thích test cũ.
 - CD10 đặt `QueueContextPort.getContext` tại Service; SQ16 cũ đặt `verifyQueueContext` tại Controller. Code chọn ranh giới CD10 để validation dùng lại được; không sửa ngầm báo cáo. SQ16 cũng chưa thể hiện tạo bệnh án lần đầu: QueueService tạo draft OPEN khi gọi bệnh nhân.
 - `medical_record` không thêm queue_id. EMR nhận queueId rồi JOIN qua appointment_id. Draft có diagnosis chuỗi rỗng để thỏa NN; chỉ định/kê đơn/kết thúc yêu cầu chẩn đoán đã lưu thực sự.
@@ -35,3 +35,7 @@ Bản này là ứng dụng học phần chạy được theo các luồng chín
 Tomcat demo bind localhost; triển khai qua reverse proxy cần HTTPS, cookie Secure và cấu hình proxy hợp lý. Chưa benchmark mục tiêu 100 người dùng. JDBC hiện mở connection theo transaction; nhóm có thể thay Database.open bằng JNDI DataSource/connection pool khi triển khai lâu dài. Tác vụ outbox hiện phù hợp một instance ứng dụng; cần cơ chế nhận việc/lock nếu chạy nhiều instance. Email sau lỗi có thể được gửi lại (at-least-once).
 
 Tài khoản demo và mật khẩu local được ghi công khai để phục vụ học phần; thay khi dùng môi trường khác. Không có dữ liệu bệnh nhân thực trong seed hoặc kiểm thử.
+
+## Frontend theo yêu cầu mới
+
+Ngày 29/10 toàn bộ View chuyển từ JSP sang React + React Bootstrap. Source đã bỏ JSP/JSTL, vẫn giữ Service/DAO và schema nghiệp vụ. SRS/SDS cloud và .vpp chưa đổi: nhóm cần cập nhật Presentation, package frontend và thông điệp HTTP/JSON trên sequence. Xem REACT_FRONTEND.md.
