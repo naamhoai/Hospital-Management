@@ -100,4 +100,24 @@ public class BillingService {
   public java.util.List<java.util.Map<String, Object>> getInvoices() {
     return new InvoiceDAO().list();
   }
+
+  /** Bỏ phí chỉ định đã hủy và tính lại hóa đơn trong transaction của thao tác hủy. */
+  public void removeUnpaidClinicalCharge(
+      Connection c, vn.hospital.model.Invoice invoice, int orderId, long actorId)
+      throws SQLException {
+    if (invoice == null) return; // Chưa lên hóa đơn thì không có khoản phí cần xóa.
+    Checks.require(
+        "UNPAID".equals(invoice.getStatus()),
+        "Không được hủy chi phí của hóa đơn đã thanh toán hoặc đã khóa.");
+    var payments = new PaymentAttemptDAO();
+    Checks.require(
+        payments.findPendingRows(c, invoice.getInvoiceId()) == null,
+        "Đang có giao dịch VNPay. Chờ giao dịch kết thúc trước khi hủy chỉ định.");
+    // Callback của giao dịch cũ không được phép thanh toán số tiền sau khi điều chỉnh.
+    payments.expirePendingAttempts(c, invoice.getInvoiceId());
+    var invoices = new InvoiceDAO();
+    invoices.removeClinicalLine(c, invoice.getInvoiceId(), orderId);
+    invoices.recalculateAfterCancellation(c, invoice.getInvoiceId());
+    AuditDAO.record(c, actorId, "REMOVE_ORDER_CHARGE", "invoice", invoice.getInvoiceId());
+  }
 }

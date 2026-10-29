@@ -60,4 +60,14 @@ public abstract class BaseController extends HttpServlet {
       view(r, s, "error");
     }
   }
+
+  protected vn.hospital.model.UploadData upload(HttpServletRequest request, String field)
+      throws ServletException, IOException {
+    if (request.getContentType() == null || !request.getContentType().startsWith("multipart/"))
+      return null;
+    Part file = request.getPart(field);
+    if (file == null || file.getSize() == 0) return null;
+    return new vn.hospital.model.UploadData(
+        file.getSubmittedFileName(), file.getContentType(), file.getInputStream().readAllBytes());
+  }
 }

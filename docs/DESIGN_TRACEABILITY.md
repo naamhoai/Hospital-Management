@@ -1,4 +1,4 @@
-# Đối chiếu thiết kế và source — nhánh Nam, 27/10/2026
+# Đối chiếu thiết kế và source — nhánh Nam, cập nhật 29/10/2026
 
 Nguồn: [Report 1 / SRS](https://docs.google.com/document/d/1wGyYYJdDnR7CLNjlmsUIBLMdyoLoOzIs/edit), [Report 2 / SDS](https://docs.google.com/document/d/1zj8LAZlByDeXaiw5AxKfLHPY45NiM_uS/edit). Đã đọc nội dung và hình CD10/CD11/CD12, SQ16–SQ20. Quy tắc trong tài liệu được dùng làm đặc tả thiết kế; việc sửa source không thay đổi báo cáo gốc.
 
@@ -47,7 +47,7 @@ Chữ ký API CD10–12 giữ kiểu domain, Integer ID và File kết quả xu�
 
 ### Luồng SQ18–19
 
-Bác sĩ chỉ định sau chẩn đoán → PENDING/PENDING_PAYMENT. Thu ngân thanh toán → PAID. Kỹ thuật viên chọn chỉ định PAID/PENDING → nhập resultData/conclusion và file/URL tùy chọn → Service lưu TestResult và chuyển COMPLETED. Unique(order_id) và khóa order ngăn duyệt hai lần. Hủy chỉ định chỉ cho bác sĩ phụ trách khi chưa thực hiện, chưa trả và chưa xuất hóa đơn. Hóa đơn loại bỏ chỉ định CANCELLED.
+Bác sĩ chỉ định sau chẩn đoán → PENDING/PENDING_PAYMENT. Thu ngân thanh toán → PAID. Kỹ thuật viên chọn chỉ định PAID/PENDING (hoặc RESULT_RECALLED) → nhập resultData/conclusion và file/URL tùy chọn → Service tạo TestResult và chuyển COMPLETED. Khóa order và UNIQUE(active_order_id) ngăn hai kết quả có hiệu lực đồng thời. Hủy chỉ định chỉ cho bác sĩ phụ trách khi chưa thực hiện/chưa trả. Nếu đã lên hóa đơn UNPAID, xóa dòng phí và tính lại tổng cùng transaction; chặn khi có giao dịch VNPay còn hiệu lực. Hóa đơn loại bỏ chỉ định CANCELLED.
 
 Tệp tối đa 5 MB, nhận PDF/PNG/JPEG theo magic header, tên UUID, lưu ngoài webroot. `file_url` lưu `attachment:<uuid.ext>` hoặc HTTPS URL. Endpoint tải tệp kiểm tra người bệnh/doctor sở hữu hoặc kỹ thuật viên; không cho truy cập đường dẫn trực tiếp. Bệnh nhân xem qua /my-records. Kết quả đã duyệt không có chức năng chỉnh sửa.
 
@@ -73,7 +73,9 @@ Quan hệ chính:
 
 ### Phần mở rộng kỹ thuật được tách riêng
 
-`04-operational-extensions.sql` tạo queue_counter (cấp số nguyên tử), invoice_line (dòng chi phí, tránh thu lặp), payment_attempt (idempotency và số tiền VNPay), notification_outbox (gửi sau commit), audit_log (truy vết). Đây là 5 bảng bổ sung, **schema chạy có 23 bảng**, không tuyên bố ERD gốc đã liệt kê chúng.
+`04-operational-extensions.sql` tạo queue_counter (cấp số nguyên tử), invoice_line (dòng chi phí, tránh thu lặp), payment_attempt (idempotency và số tiền VNPay), notification_outbox (gửi sau commit), audit_log (truy vết). Sau bước này có **23 bảng**, không tuyên bố ERD gốc đã liệt kê các bảng kỹ thuật này.
+
+`05-nam-workflows.sql` bổ sung `result_recall_request`, `report_daily_summary`, vai trò DEPARTMENT_HEAD và `test_result.status`. Schema hiện có **25 bảng**. UNIQUE(order_id) được thay bằng UNIQUE trên generated column `active_order_id`: chỉ APPROVED giữ order_id, RECALLED là NULL. ClinicalOrder có 0..1 kết quả hiệu lực và 0..* kết quả lịch sử. Dòng quan hệ 0..1 phía trên mô tả bản hiệu lực của thiết kế gốc; class/ERD cần chú thích lịch sử khi cập nhật báo cáo.
 
 Cột bổ sung: users.failed_attempts/locked_until; patients.booking_blocked_until; appointment.created_at/cancelled_at/consultation_fee/active_slot; queue.work_date/created_at; medical_record.created_at/closed_at; clinical_order.unit_price; test_result.approved/created_at; medication.status; invoice.created_at/paid_at; feedback.created_at. Unique active_slot, queue theo ngày/phòng và unique dòng chi phí bảo vệ khi chạy đồng thời.
 
@@ -82,9 +84,20 @@ Cột bổ sung: users.failed_attempts/locked_until; patients.booking_blocked_un
 1. User đã chọn MySQL; SDS có NVARCHAR(MAX)/SQL Server. Dùng utf8mb4 VARCHAR/TEXT, giữ trường và quan hệ nghiệp vụ. Service/medication/detail đơn giá DECIMAL(10,2), invoice DECIMAL(12,2).
 2. CD10 đặt queue context tại Service; SQ16 cũ tại Controller. Chọn CD10, Controller chỉ parse HTTP; xem bước SQ16 phía trên.
 3. SDS yêu cầu diagnosis NN nhưng hệ thống cần draft trước khi khám. Draft lưu chuỗi rỗng; không cho thực hiện nghiệp vụ tiếp theo trước chẩn đoán hợp lệ.
-4. SRS mục tác vụ nền đề cập báo cáo tổng hợp ban đêm, UC17–18 đòi số liệu truy vấn theo bộ lọc và thời gian thực. CD12 triển khai query read-only trực tiếp; chưa có bảng kho tổng hợp.
+4. SRS đề cập tổng hợp ban đêm và UC17–18 đòi số liệu theo bộ lọc/thời gian thực. Màn hình dùng query read-only; ReportBatchService ghi một dòng tổng hợp ngày trước sau nửa đêm Việt Nam, chạy lại không cộng lặp. Chưa tự bù toàn bộ ngày ứng dụng ngừng chạy.
 5. Mô tả architecture cho Servlet/JSP, các hình cũ nhắc Repository/Redis/JWT. Nguồn hiện thống nhất DAO + HttpSession; không coi đổi tên này là bằng chứng đã triển khai Redis/JWT. Những yêu cầu ngoài phần Nam còn thiếu được công khai trong SCOPE.md.
 
 ## Kiểm thử
 
 DesignContractTest kiểm tra kiến trúc, đủ bảng nghiệp vụ, chữ ký kiểu dữ liệu, mapping Java Bean, Unicode PDF, validation/filter và tệp bất hợp lệ. NamWorkflowTest chạy MySQL cho sở hữu bệnh án/tệp, prescription atomic, hủy và tính hóa đơn, duyệt/khóa kết quả, PAID/filter/group/zero-data/export. WorkflowTest giữ kịch bản toàn viện và đặt lịch đồng thời. scripts/smoke_http.py chạy HTTP/JSP và multipart, riêng dữ liệu giả lập localhost.
+
+## Bổ sung ngày 29/10/2026
+
+- `ClinicalProgress.from` suy ra tiến trình hiển thị. OPEN/CLOSED vẫn là trạng thái khóa bệnh án.
+- `ClinicalService.cancelOrder` → `BillingService.removeUnpaidClinicalCharge`: khóa bệnh án → hóa đơn → chỉ định; tính lại phí nguyên tử; callback của payment attempt hết hạn không được thanh toán hóa đơn đã đổi số tiền.
+- `ResultRecallController` → `ResultRecallService` → DAO: đề nghị → trưởng khoa thuộc khoa dịch vụ phê duyệt/từ chối; cần lý do, ý kiến, PDF khi phê duyệt. PDF lưu người/thời gian duyệt, không kiểm tra PKI. Bản gốc/tệp được giữ; bản thay thế có ID mới.
+- `ClinicalUpdateController` → `ClinicalUpdateService` → `ClinicalUpdateDAO`: đọc audit có kết quả/thu hồi theo bác sĩ sở hữu, UI polling 15 giây. Không reload form.
+- `MaintenanceService` → `ReportBatchService` → `ReportSummaryDAO`: tổng hợp ngày trước bằng upsert. Không yêu cầu SMTP được cấu hình để tổng hợp báo cáo.
+- Lượt CLOSED có kết quả thu hồi vẫn giữ khóa, cảnh báo bác sĩ để đánh giá bước chuyên môn tiếp theo; không âm thầm sửa đơn/chẩn đoán cũ.
+
+Các luồng và 5 sequence bám code có trong [NAM_CODE_GUIDE.md](NAM_CODE_GUIDE.md). Đây là tài liệu local; báo cáo Google Docs và .vpp chưa đổi trong lần sửa code. `NamRevisionTest` thêm kiểm tra đồng thời, quyền trưởng khoa, tệp gốc/biên bản, thông báo và tổng hợp ngày. Xem VALIDATION.md cho kết quả thực chạy.

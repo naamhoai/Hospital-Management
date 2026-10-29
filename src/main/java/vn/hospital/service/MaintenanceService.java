@@ -5,12 +5,15 @@ import vn.hospital.integration.EmailClient;
 import vn.hospital.util.Database;
 
 public class MaintenanceService {
+  private final ReportBatchService reportBatch = new ReportBatchService();
+
   public void run() {
     Database.tx(
         c -> {
           new AppointmentDAO().markNoShows(c);
           return null;
         });
+    reportBatch.summarizePreviousDay();
     var client = new EmailClient();
     if (!client.configured()) return;
     var dao = new NotificationDAO();

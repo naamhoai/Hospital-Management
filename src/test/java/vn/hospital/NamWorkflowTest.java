@@ -80,11 +80,6 @@ class NamWorkflowTest {
                 "UPDATE appointment a JOIN queue q ON q.appointment_id=a.appointment_id SET"
                     + " a.status='COMPLETED' WHERE q.queue_id=?",
                 queue);
-            Jdbc.update(
-                c,
-                "UPDATE appointment a JOIN queue q ON q.appointment_id=a.appointment_id SET"
-                    + " a.status='COMPLETED' WHERE q.queue_id=?",
-                queue);
             Jdbc.update(c, "UPDATE queue SET status='COMPLETED' WHERE queue_id=?", queue);
             return null;
           });
@@ -151,7 +146,7 @@ class NamWorkflowTest {
   }
 
   @Test
-  void cd11CancelIsExcludedFromBillingAndCannotCancelBilledOrders() {
+  void cd11CancelRemovesUnpaidChargeFromInvoice() {
     var service = new ClinicalService(doctor);
     var orders =
         service.createClinicalOrders(new ClinicalOrderRequest(record, List.of(2, 3), "Chỉ dẫn"));
@@ -177,7 +172,17 @@ class NamWorkflowTest {
         Jdbc.number(
             Jdbc.read("SELECT total_amount FROM invoice WHERE invoice_id=?", invoice).get(0),
             "total_amount"));
-    assertThrows(BusinessException.class, () -> service.cancelOrder(payable.getOrderId()));
+    assertTrue(service.cancelOrder(payable.getOrderId()));
+    assertEquals(
+        150000,
+        Jdbc.number(
+            Jdbc.read("SELECT total_amount FROM invoice WHERE invoice_id=?", invoice).get(0),
+            "total_amount"));
+    assertTrue(
+        Jdbc.read(
+                "SELECT line_id FROM invoice_line WHERE source_type='ORDER' AND source_id=?",
+                payable.getOrderId())
+            .isEmpty());
   }
 
   @Test

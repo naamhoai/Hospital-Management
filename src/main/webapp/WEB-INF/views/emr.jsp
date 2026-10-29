@@ -65,7 +65,7 @@
 <p class="muted">Ngày sinh: <c:out value="${patient.date_of_birth}"/> · Điện thoại: <c:out value="${patient.phone_number}"/> · Phòng <c:out value="${queueContext.roomAssigned}"/>
 </p>
 </div>
-<ui:status value="${record.status}"/>
+<div><ui:status value="${record.status}"/><p class="muted">Tiến trình: <strong><c:out value="${clinicalProgress.label}"/></strong></p></div>
 </section>
 <div class="workspace-tabs no-print">
 <a href="#diagnosis">Chẩn đoán</a>
@@ -205,7 +205,8 @@
 <ui:status value="${o.paymentStatus}"/> <ui:status value="${o.status}"/>
 </div>
 </div>
-<c:if test="${not empty o.result}">
+<c:if test="${o.status=='RESULT_RECALLED'}"><div class="notice warning">Kết quả cũ đã thu hồi theo phê duyệt. Cần đối chiếu lại thông tin khám khi có bản thay thế.</div></c:if>
+<c:if test="${not empty o.result}"><details class="recall-form"><summary>Đề nghị thu hồi kết quả</summary><form method="post" action="${ctx}/result-recalls"><input type="hidden" name="csrf" value="${sessionScope.csrf}"><input type="hidden" name="action" value="request"><input type="hidden" name="resultId" value="${o.result.resultId}"><input type="hidden" name="orderId" value="${o.orderId}"><label>Lý do cần thu hồi *</label><textarea name="reason" required maxlength="255" aria-label="Lý do thu hồi kết quả"></textarea><button class="secondary">Gửi đề nghị cho trưởng khoa</button></form></details>
 <p>
 <strong>Kết quả:</strong> <c:out value="${o.result.resultData}"/>
 </p>

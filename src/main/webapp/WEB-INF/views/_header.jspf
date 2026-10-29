@@ -52,6 +52,7 @@
 <c:if test="${role=='DOCTOR'}">
 <a href="${ctx}/emr">Bệnh án & kê đơn</a>
 </c:if>
+<c:if test="${role=='DEPARTMENT_HEAD'}"><a href="${ctx}/result-recalls">Duyệt thu hồi kết quả</a></c:if>
 <c:if test="${role=='LAB_TECHNICIAN'}">
 <a href="${ctx}/lab">Kết quả xét nghiệm</a>
 </c:if>
@@ -67,6 +68,7 @@
 </c:if>
 </nav>
 <main>
+<c:if test="${role=='DOCTOR'}"><section id="clinical-notices" class="notice" role="status" hidden data-url="${ctx}/clinical-updates" data-emr-url="${ctx}/emr"></section></c:if>
 <c:if test="${not empty sessionScope.flash}">
 <div class="notice" role="status">
 <c:out value="${sessionScope.flash}"/>

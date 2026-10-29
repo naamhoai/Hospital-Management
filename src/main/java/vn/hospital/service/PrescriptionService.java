@@ -24,6 +24,7 @@ public class PrescriptionService {
     return new MedicationDAO().searchApproved(keyword);
   }
 
+  /** Mỗi thuốc chỉ xuất hiện một lần; số lượng và liều dùng phải được nhập hợp lệ. */
   private List<PrescriptionDetail> validateItems(PrescriptionRequest request) {
     Checks.require(request != null && request.getRecordId() != null, "Thiếu mã bệnh án.");
     Checks.require(
@@ -52,6 +53,7 @@ public class PrescriptionService {
     return items;
   }
 
+  /** Chưa được kê đơn nếu còn chờ xét nghiệm; kiểm tra tồn kho sơ bộ để báo lỗi sớm. */
   public Boolean validatePrescription(PrescriptionRequest request) {
     Actors.require(actor, "DOCTOR");
     List<PrescriptionDetail> items = validateItems(request);
@@ -70,6 +72,7 @@ public class PrescriptionService {
         });
   }
 
+  /** Lưu đơn, các dòng thuốc và trừ kho trong cùng transaction để không bị trừ kho một phần. */
   public Prescription issuePrescription(PrescriptionRequest request) {
     Actors.require(actor, "DOCTOR");
     List<PrescriptionDetail> items = validateItems(request);
@@ -118,8 +121,7 @@ public class PrescriptionService {
                   result.getPrescriptionId());
               return result;
             });
-    // External sync follows commit; provider failure must never cause a duplicate local
-    // prescription.
+    // Gửi sang hệ thống dược sau commit. Lỗi mạng không được tạo lại đơn hoặc trừ kho lần hai.
     if (pharmacy.isConfigured())
       try {
         pharmacy.syncPrescription(saved.getPrescriptionId());

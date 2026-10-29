@@ -9,6 +9,7 @@
 <span class="badge">${applicationScope.labels[role]}</span>
 </div>
 <div class="grid action-grid">
+<c:if test="${role=='DEPARTMENT_HEAD'}"><a class="card action-card" href="${ctx}/result-recalls"><span class="action-icon">01</span><h2>Duyệt thu hồi kết quả</h2><p>Xem đề nghị, kiểm tra lý do và lưu biên bản phê duyệt.</p><span class="link-text">Mở danh sách đề nghị →</span></a></c:if>
 <c:if test="${role=='DOCTOR'}">
 <a class="card action-card" href="${ctx}/queue">
 <span class="action-icon">01</span>

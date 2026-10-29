@@ -17,6 +17,7 @@ public class EMRService {
     this.actor = actor;
   }
 
+  /** Nhận queueId từ khối tiếp nhận, xác minh bác sĩ rồi lấy bệnh án tương ứng. */
   public MedicalRecord getRecord(Integer queueId) {
     Actors.require(actor, "DOCTOR");
     return Database.tx(
@@ -31,6 +32,7 @@ public class EMRService {
         });
   }
 
+  /** Kiểm tra dữ liệu và quyền sở hữu trước khi lưu chẩn đoán; lỗi sẽ rollback toàn bộ. */
   public MedicalRecord recordClinicalDiagnosis(Integer queueId, DiagnosisRequest request) {
     Actors.require(actor, "DOCTOR");
     Checks.require(request != null, "Thiếu dữ liệu chẩn đoán.");
@@ -84,6 +86,7 @@ public class EMRService {
     return m;
   }
 
+  /** Chỉ kết thúc khi có chẩn đoán và không còn chỉ định đang chờ; tạo hóa đơn cho phí mới. */
   public void closeRecord(Integer queueId) {
     Actors.require(actor, "DOCTOR");
     Database.tx(
@@ -141,6 +144,7 @@ public class EMRService {
             page.put("history", dao.findClosedHistory(c, m.getPatientId()));
             var orders = new ClinicalOrderDAO().findByRecordId(c, m.getRecordId());
             page.put("orders", orders);
+            page.put("clinicalProgress", ClinicalProgress.from(m, orders));
             page.put(
                 "hasPendingTests",
                 orders.stream()

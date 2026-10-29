@@ -11,7 +11,8 @@ public class TestResultDAO {
 
   public TestResult findByOrderId(Connection c, long id) throws SQLException {
     return BeanMapper.map(
-        Jdbc.one(c, "SELECT * FROM test_result WHERE order_id=?", id), TestResult.class);
+        Jdbc.one(c, "SELECT * FROM test_result WHERE order_id=? AND status='APPROVED'", id),
+        TestResult.class);
   }
 
   public TestResult findById(Connection c, long id) throws SQLException {
@@ -36,5 +37,24 @@ public class TestResultDAO {
                 result.getConclusion(),
                 result.getFileUrl())));
     return findByOrderId(c, result.getOrderId());
+  }
+
+  public Integer findOrderId(Connection c, int resultId) throws SQLException {
+    var row = Jdbc.one(c, "SELECT order_id FROM test_result WHERE result_id=?", resultId);
+    return row == null ? null : ((Number) row.get("order_id")).intValue();
+  }
+
+  public void markRecalled(Connection c, int resultId) throws SQLException {
+    Jdbc.update(
+        c,
+        "UPDATE test_result SET status='RECALLED',approved=FALSE WHERE result_id=? AND"
+            + " status='APPROVED'",
+        resultId);
+  }
+
+  public TestResult findByIdForUpdate(Connection c, int id) throws SQLException {
+    return BeanMapper.map(
+        Jdbc.one(c, "SELECT * FROM test_result WHERE result_id=? FOR UPDATE", id),
+        TestResult.class);
   }
 }
