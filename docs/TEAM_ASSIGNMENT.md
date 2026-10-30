@@ -4,10 +4,10 @@ Mỗi người phụ trách 3 class diagram và 5 sequence như bảng task assi
 
 | Người | Detailed Design | Class | Sequence | Source chính |
 |---|---|---|---|---|
-| **1 · Hồ Quốc Khánh** | 3.1 Authentication; 3.2 Search; 3.3 Feedback | CD01–CD03 | SQ01 Login; SQ02 Logout; SQ03 Authorization; SQ04 Search; SQ05 Feedback | `AuthController`, `SecurityFilter`, `AuthService`, `UserDAO`, `SearchController`, `SearchService`, `SearchDAO`, `FeedbackController`, `FeedbackService`, React KhanhPages.jsx |
-| **2 · Võ Công Tráng** | 3.4 Appointment; 3.5 Catalog; 3.6 Billing | CD04–CD06 | SQ06 Create; SQ07 Reschedule; SQ08 Cancel; SQ09 Catalog; SQ10 Invoice & Payment | `AppointmentController/Service/DAO`, `ServiceCatalogController`, `CatalogService`, `BillingController/Service`, `InvoiceDAO`, `PaymentService`, `VNPayClient`, `PaymentCallbackController`, React TrangPages.jsx |
-| **3 · Nguyễn Đình Kiên** | 3.7 Schedule; 3.8 Reception; 3.9 Queue | CD07–CD09 | SQ11 Setup Schedule; SQ12 Leave; SQ13 Capacity; SQ14 Reception; SQ15 Queue | `ScheduleController/Service/DAO`, `ReceptionController`, `QueueController`, `QueueService`, React KienPages.jsx |
-| **4 · Nguyễn Hoài Nam** | 3.10 EMR & Prescription; 3.11 Clinical/Lab; 3.12 Reports | CD10–CD12 | SQ16 Diagnosis; SQ17 Prescription; SQ18 Order Tests; SQ19 Lab Result; SQ20 Reports | `EMRController/Service`, `MedicalRecordDAO`, `QueueContextPort`, `PrescriptionController/Service`, `ClinicalService`, `ClinicalOrderController`, `LabResultController`, `ReportController/DAO`, `AnalyticsService`, `ReportExportService`, React NamEmrPage/NamLabPages/NamRecordPages/NamReportPage |
+| **1 · Hồ Quốc Khánh** | 3.1 Authentication; 3.2 Search; 3.3 Feedback | CD01–CD03 | SQ01 Login; SQ02 Logout; SQ03 Authorization; SQ04 Search; SQ05 Feedback | `AuthController`, `SecurityFilter`, `AuthService`, `UserDAO`, `SearchController`, `SearchService`, `SearchDAO`, `FeedbackController`, `FeedbackService`, JSP login/search/feedback |
+| **2 · Võ Công Tráng** | 3.4 Appointment; 3.5 Catalog; 3.6 Billing | CD04–CD06 | SQ06 Create; SQ07 Reschedule; SQ08 Cancel; SQ09 Catalog; SQ10 Invoice & Payment | `AppointmentController/Service/DAO`, `ServiceCatalogController`, `CatalogService`, `BillingController/Service`, `InvoiceDAO`, `PaymentService`, `VNPayClient`, `PaymentCallbackController`, JSP appointments/services/billing |
+| **3 · Nguyễn Đình Kiên** | 3.7 Schedule; 3.8 Reception; 3.9 Queue | CD07–CD09 | SQ11 Setup Schedule; SQ12 Leave; SQ13 Capacity; SQ14 Reception; SQ15 Queue | `ScheduleController/Service/DAO`, `ReceptionController`, `QueueController`, `QueueService`, JSP schedules/reception/queue |
+| **4 · Nguyễn Hoài Nam** | 3.10 EMR & Prescription; 3.11 Clinical/Lab; 3.12 Reports | CD10–CD12 | SQ16 Diagnosis; SQ17 Prescription; SQ18 Order Tests; SQ19 Lab Result; SQ20 Reports | `EMRController/Service`, `MedicalRecordDAO`, `QueueContextPort`, `PrescriptionController/Service`, `ClinicalService`, `ClinicalOrderController`, `LabResultController`, `ReportController/DAO`, `AnalyticsService`, `ReportExportService`, JSP emr/prescription/lab/reports |
 
 ## Hợp đồng phối hợp
 
@@ -23,7 +23,3 @@ Mỗi người phụ trách 3 class diagram và 5 sequence như bảng task assi
 Khánh: `feature/khanh-auth-search-feedback`; Tráng: `feature/trang-appointments-billing`; Kiên: `feature/kien-schedules-queue`; Nam: `feature/nam-emr-reports`. Đây là tên gợi ý khi tách nhánh. Bản refactor hiện làm trên nhánh `nam` của repository nhóm.
 
 Mỗi người chạy `mvn test`, demo một luồng thành công và một luồng bị chặn của phần mình trước khi gộp code. Những hạng mục chưa triển khai đủ theo SRS nằm trong `SCOPE.md`, dùng làm backlog tiếp theo.
-
-## Frontend dùng chung
-
-Cả 4 người dùng React + React Bootstrap trong frontend/. App.jsx quản lý phiên/điều hướng; components.jsx và api.js dùng chung. Xem REACT_FRONTEND.md để build, gọi API và cập nhật sơ đồ View theo yêu cầu mới.

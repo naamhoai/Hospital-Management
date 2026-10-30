@@ -7,11 +7,11 @@ Nguồn: [Report 1 / SRS](https://docs.google.com/document/d/1wGyYYJdDnR7CLNjlms
 | Thành phần trong báo cáo | Triển khai | Trách nhiệm |
 |---|---|---|
 | Browser → Filter | SecurityFilter | UTF-8, HttpSession, role, CSRF, security headers |
-| Controller Servlet | controller/*Controller | Parse request → gọi Service → JSON / redirect / stream file |
+| Controller Servlet | controller/*Controller | Parse request → gọi Service → forward JSP / redirect / stream file |
 | Service | service | Quyền sở hữu, validation, nghiệp vụ, ranh giới transaction, điều phối DAO và adapter |
 | DAO | dao | SQL có tham số, khóa bản ghi, ánh xạ BeanMapper |
 | bean (model) | model | Entity/request/report Java Beans; `model` là tên package đã có, không tạo hai bản domain song song |
-| view React | frontend/src/pages, components.jsx | Gọi Servlet API, hiển thị dữ liệu bằng React Bootstrap; nội dung người dùng render dạng text |
+| view JSP | WEB-INF/views, WEB-INF/tags | Hiển thị dữ liệu Controller truyền, escape dữ liệu; không scriptlet SQL |
 | Utility | util | Database, Config, Checks, Passwords, AttachmentStorage |
 | External integration | integration | VNPayClient, EmailClient, PharmacyClient; QueueContextPort làm biên kết nối khối vận hành |
 | Background lifecycle | listener | Khởi động scheduler → MaintenanceService; không chứa SQL |
@@ -22,7 +22,7 @@ Phụ thuộc được kiểm tra bằng DesignContractTest: Controller không i
 
 | Thiết kế | HTTP/View | Chuỗi xử lý và lớp |
 |---|---|---|
-| CD10 / SQ16 — Clinical Exam and Diagnosis | GET/POST /api/emr; React EmrPage | EMRController → EMRService.getRecord/recordClinicalDiagnosis/getPatientHistory → QueueContextPort.getContext + MedicalRecordDAO.findByQueueId/findByPatientId/save. DiagnosisRequest chứa symptoms/icdCode/diagnosis/notes |
+| CD10 / SQ16 — Clinical Exam and Diagnosis | GET/POST /emr, emr.jsp | EMRController → EMRService.getRecord/recordClinicalDiagnosis/getPatientHistory → QueueContextPort.getContext + MedicalRecordDAO.findByQueueId/findByPatientId/save. DiagnosisRequest chứa symptoms/icdCode/diagnosis/notes |
 | CD10 / SQ17 — Issue E-Prescription | POST /prescriptions; GET ?id=; GET &format=pdf | PrescriptionController → PrescriptionService.searchMedication/validatePrescription/issuePrescription/printPrescription → MedicalRecordDAO + MedicationDAO.searchApproved/findById/checkStock → PrescriptionDAO.saveWithDetails. PrescriptionRequest → Prescription/PrescriptionDetail; PharmacyClient là tùy chọn |
 | CD11 / SQ18 — Order Clinical Tests | POST /clinical-orders | ClinicalOrderController → ClinicalService.createClinicalOrders(ClinicalOrderRequest)/cancelOrder → MedicalRecordDAO + MedicalServiceDAO.findById/findAllActive + ClinicalOrderDAO.findByRecordId/saveAll/updateExecutionStatus |
 | CD11 / SQ19 — Update Lab Results | GET/POST /lab; GET /attachments?resultId= | LabResultController → ClinicalService.recordTestResult(orderId,TestResult[,UploadData]) → ClinicalOrderDAO + TestResultDAO.findByOrderId/save. Lưu kết quả + cập nhật trạng thái + audit + notification trong transaction; tệp rollback khi DB lỗi |
@@ -35,7 +35,7 @@ Chữ ký API CD10–12 giữ kiểu domain, Integer ID và File kết quả xu�
 1. Kiên gọi QueueService.callNext: WAITING → IN_CONSULTATION, tạo một draft MedicalRecord cho appointment.
 2. Doctor mở queueId; Service kiểm tra queue và doctor được phân công, đọc bệnh án và lịch sử.
 3. Doctor nhập DiagnosisRequest. Validation yêu cầu triệu chứng/chẩn đoán/mã ICD nằm trong danh mục cấu hình.
-4. DAO cập nhật bệnh án trong transaction; trả MedicalRecord → JSON → React. Dữ liệu sai trả 422, giữ dữ liệu form chẩn đoán.
+4. DAO cập nhật bệnh án trong transaction; trả MedicalRecord → JSP. Dữ liệu sai trả 422, giữ dữ liệu form chẩn đoán.
 5. Khi kết thúc: không còn chỉ định chưa hoàn tất, lập hóa đơn chi phí mới, đóng bệnh án, hoàn tất queue/appointment, tạo email outbox.
 
 ### Luồng SQ17
@@ -53,7 +53,7 @@ Tệp tối đa 5 MB, nhận PDF/PNG/JPEG theo magic header, tên UUID, lưu ngo
 
 ### Luồng SQ20
 
-Validate khoảng ngày ≤ 2 năm, whitelist groupBy/paymentMethod → DAO SELECT với connection readOnly → report typed → tính tỷ lệ (mẫu số 0 trả 0), series → JSON → React. Báo cáo doanh thu chỉ tính dòng thuộc hóa đơn PAID theo paid_at; bộ lọc serviceType phân biệt khám bệnh/cận lâm sàng/thuốc; serviceId giới hạn dòng chỉ định đó, không nhân tiền do JOIN nhiều dịch vụ. Tổng hóa đơn đếm DISTINCT; không cộng số hóa đơn từng dòng dịch vụ để làm tổng. Báo cáo lượt khám đếm appointment theo appointment_date, không phải số bệnh nhân duy nhất.
+Validate khoảng ngày ≤ 2 năm, whitelist groupBy/paymentMethod → DAO SELECT với connection readOnly → report typed → tính tỷ lệ (mẫu số 0 trả 0), series → JSP. Báo cáo doanh thu chỉ tính dòng thuộc hóa đơn PAID theo paid_at; bộ lọc serviceType phân biệt khám bệnh/cận lâm sàng/thuốc; serviceId giới hạn dòng chỉ định đó, không nhân tiền do JOIN nhiều dịch vụ. Tổng hóa đơn đếm DISTINCT; không cộng số hóa đơn từng dòng dịch vụ để làm tổng. Báo cáo lượt khám đếm appointment theo appointment_date, không phải số bệnh nhân duy nhất.
 
 Excel giữ ô chuỗi dạng inlineStr để nội dung bắt đầu '=' không thành công thức; có sheet chi tiết và sheet thông tin bộ lọc/tổng. PDF nhúng font Noto Sans (SIL OFL trong resources/fonts), giữ tiếng Việt. Không có dữ liệu hiển thị trạng thái trống và xuất file hợp lệ. Controller xóa file xuất tạm sau khi stream.
 
@@ -89,7 +89,7 @@ Cột bổ sung: users.failed_attempts/locked_until; patients.booking_blocked_un
 
 ## Kiểm thử
 
-DesignContractTest kiểm tra kiến trúc, đủ bảng nghiệp vụ, chữ ký kiểu dữ liệu, mapping Java Bean, Unicode PDF, validation/filter và tệp bất hợp lệ. NamWorkflowTest chạy MySQL cho sở hữu bệnh án/tệp, prescription atomic, hủy và tính hóa đơn, duyệt/khóa kết quả, PAID/filter/group/zero-data/export. WorkflowTest giữ kịch bản toàn viện và đặt lịch đồng thời. scripts/smoke_http.py chạy HTTP/JSON và multipart, riêng dữ liệu giả lập localhost.
+DesignContractTest kiểm tra kiến trúc, đủ bảng nghiệp vụ, chữ ký kiểu dữ liệu, mapping Java Bean, Unicode PDF, validation/filter và tệp bất hợp lệ. NamWorkflowTest chạy MySQL cho sở hữu bệnh án/tệp, prescription atomic, hủy và tính hóa đơn, duyệt/khóa kết quả, PAID/filter/group/zero-data/export. WorkflowTest giữ kịch bản toàn viện và đặt lịch đồng thời. scripts/smoke_http.py chạy HTTP/JSP và multipart, riêng dữ liệu giả lập localhost.
 
 ## Bổ sung ngày 29/10/2026
 
@@ -101,9 +101,3 @@ DesignContractTest kiểm tra kiến trúc, đủ bảng nghiệp vụ, chữ k�
 - Lượt CLOSED có kết quả thu hồi vẫn giữ khóa, cảnh báo bác sĩ để đánh giá bước chuyên môn tiếp theo; không âm thầm sửa đơn/chẩn đoán cũ.
 
 Các luồng và 5 sequence bám code có trong [NAM_CODE_GUIDE.md](NAM_CODE_GUIDE.md). Đây là tài liệu local; báo cáo Google Docs và .vpp chưa đổi trong lần sửa code. `NamRevisionTest` thêm kiểm tra đồng thời, quyền trưởng khoa, tệp gốc/biên bản, thông báo và tổng hợp ngày. Xem VALIDATION.md cho kết quả thực chạy.
-
-## View chuyển sang React ngày 29/10
-
-Theo yêu cầu mới, frontend dùng React + React Bootstrap. ApiController forward /api/* đến Servlet nghiệp vụ; FrontendResponse serialize Java Bean/Map thành JSON, loại secret và trả session/CSRF mới. Các tên Service/DAO/domain ở bảng trên giữ nguyên. Đường dẫn UI /emr, /reports… giữ nguyên; React gọi API với tiền tố /api. Các file JSP cũ đã bỏ khỏi source/WAR.
-
-Báo cáo cloud/.vpp chưa được sửa. Cần đổi boundary View sang React, mô tả request/response HTTP/JSON và package frontend riêng; xem REACT_FRONTEND.md.

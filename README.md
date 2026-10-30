@@ -1,8 +1,6 @@
 # Hospital Appointment & Medical Service Management System
 
-Ứng dụng học phần SWD392 cho nhóm 4 người: **Khánh, Tráng, Kiên, Nam**. Frontend chung dùng **React + React Bootstrap + Vite**; backend Java 17, Servlet 6, JDBC, Tomcat 10.1 và MySQL 8.4. Giao diện tiếng Việt, đóng gói cùng backend trong `hospital.war`.
-
-Theo yêu cầu đổi frontend ngày 29/10, các trang JSP đã được thay bằng React và Servlet trả JSON qua `/api/*`. Xem [hướng dẫn frontend và những chỗ cần cập nhật trong báo cáo/sơ đồ](docs/REACT_FRONTEND.md).
+Ứng dụng học phần SWD392 cho nhóm 4 người: **Khánh, Tráng, Kiên, Nam**. Source dùng Java 17, Servlet 6, JSP/JSTL, JDBC, Tomcat 10.1 và MySQL 8.4. Giao diện tiếng Việt, đóng gói `hospital.war`.
 
 ## Chạy nhanh bằng Docker
 
@@ -16,7 +14,7 @@ Mở **http://localhost:8080/hospital**. MySQL của Compose dùng cổng máy c
 
 ## Chạy bằng IDE và Tomcat
 
-1. Cài JDK 17+, Maven 3.9, **Node.js 22.12+ và npm**, MySQL 8.4 và Tomcat **10.1**. Trong IntelliJ/NetBeans/Eclipse chọn **Open Maven Project** tại `pom.xml`. Node/npm phải có trên PATH của tiến trình Maven/IDE.
+1. Cài JDK 17+, Maven 3.9, MySQL 8.4 và Tomcat **10.1**. Trong IntelliJ/NetBeans/Eclipse chọn **Open Maven Project** tại `pom.xml`.
 2. Trong MySQL Workbench, chạy lần lượt `database/01-schema.sql` → `database/04-operational-extensions.sql` → `database/02-seed.sql` → `database/05-nam-workflows.sql` → `database/03-create-local-user.sql` trên một database mới. Nếu cần tài khoản trưởng khoa demo, chạy thêm `database/06-demo-department-head.sql`. Schema/seed và migration 05 chỉ chạy một lần.
 3. Đặt biến môi trường cho tiến trình Tomcat:
 
@@ -28,13 +26,9 @@ $env:APP_BASE_URL='http://localhost:8080/hospital'
 mvn clean package
 ```
 
-4. Maven tự cài dependency theo frontend/package-lock.json và build React. Copy `target/hospital.war` vào thư mục `webapps` của Tomcat rồi khởi động Tomcat với JVM option `-Duser.timezone=Asia/Ho_Chi_Minh`. Truy cập http://localhost:8080/hospital.
+4. Copy `target/hospital.war` vào thư mục `webapps` của Tomcat rồi khởi động Tomcat với JVM option `-Duser.timezone=Asia/Ho_Chi_Minh`. Truy cập http://localhost:8080/hospital.
 
 Cũng có thể copy `src/main/resources/application.properties` thành `application-local.properties` trong cùng thư mục và sửa cấu hình. File local đã được `.gitignore`; không commit mật khẩu. Biến môi trường được ưu tiên hơn file cấu hình.
-
-`application-local.properties` chỉ dùng khi phát triển trên máy cá nhân và được loại khỏi WAR. Khi triển khai WAR lên Tomcat, đặt DB_URL/DB_USER/DB_PASSWORD cho tiến trình Tomcat như hướng dẫn; không đóng gói cấu hình riêng của máy mình để gửi cho nhóm.
-
-Nếu đăng nhập báo `Unknown column 'u.password'`, database vẫn dùng schema MVP cũ. Xem [hướng dẫn kiểm tra và cập nhật database](docs/DATABASE_TROUBLESHOOTING.md); chạy `database/00-check-schema.sql` trước khi chọn migration. Không tạo lại database đang có dữ liệu.
 
 Không dùng Tomcat 9 cho source này vì Tomcat 9 dùng namespace `javax.servlet`; source hiện dùng `jakarta.servlet`.
 
@@ -44,7 +38,7 @@ Sau khi MySQL đã có schema và seed:
 
 ```powershell
 mvn package
-mvn -Pdev -Dfrontend.skip=true test-compile exec:java "-Dexec.mainClass=vn.hospital.dev.DevServer" "-Dexec.classpathScope=test"
+mvn -Pdev test-compile exec:java "-Dexec.mainClass=vn.hospital.dev.DevServer" "-Dexec.classpathScope=test"
 ```
 
 Tomcat nhúng mặc định cổng 8080, bind localhost; đặt `HTTP_PORT` để đổi cổng. Sau mỗi lần sửa source, dừng tiến trình, chạy lại `mvn package` rồi khởi động lại. Bản triển khai chính vẫn là WAR trên Tomcat.
@@ -85,7 +79,7 @@ Nhánh bổ sung: bác sĩ/kỹ thuật viên đề nghị thu hồi kết quả
 
 ```text
 src/main/java/vn/hospital/
-  controller/    Servlet: nhận request, gọi Service, trả JSON cho React
+  controller/    Servlet: nhận request, gọi Service, forward JSP
   filter/        UTF-8, HttpSession, phân quyền và CSRF
   service/       Quy tắc nghiệp vụ và ranh giới transaction
   dao/           JDBC PreparedStatement, truy vấn MySQL và audit
@@ -93,12 +87,12 @@ src/main/java/vn/hospital/
   integration/   QueueContextPort, VNPayClient, EmailClient
   listener/      Tác vụ nền, outbox email và nhãn giao diện
   util/          DB connection/transaction, cấu hình, validation, băm mật khẩu, file storage
-frontend/src/                  React pages, component React Bootstrap, Fetch API và CSS chung
+src/main/webapp/WEB-INF/views/   JSP, không truy cập trực tiếp từ URL
 database/                      Schema, seed, user MySQL cho máy local
 docs/                          Phân công và phạm vi triển khai
 ```
 
-Controller nhận HTTP, gọi Service và trả dữ liệu JSON; React hiển thị dữ liệu. ApiController dùng lại các Servlet nghiệp vụ qua /api/*, không sao chép Service. Toàn bộ SQL nghiệp vụ nằm trong DAO; Service điều phối transaction và kiểm tra quyền. DAO ánh xạ domain sang Java Bean qua `BeanMapper`; các danh sách JOIN cho màn hình vẫn là projection `Map`, không thay thế domain model.
+Controller chỉ nhận HTTP, gọi Service và forward JSP. Toàn bộ SQL nghiệp vụ nằm trong DAO; Service điều phối transaction và kiểm tra quyền. DAO ánh xạ domain sang Java Bean qua `BeanMapper`; các danh sách JOIN cho màn hình vẫn là projection `Map`, không thay thế domain model.
 
 Chi tiết đối chiếu báo cáo, CD10–CD12/SQ16–SQ20, quan hệ ERD và những điểm tài liệu tự mâu thuẫn nằm trong [docs/DESIGN_TRACEABILITY.md](docs/DESIGN_TRACEABILITY.md). `model` chính là package `bean (model)` trong bảng mô tả package; `integration` và `listener` chứa adapter/tác vụ khởi động kỹ thuật.
 
@@ -136,7 +130,7 @@ Cấu hình DB qua biến môi trường hoặc file local như hướng dẫn p
 ## Quy tắc đã có
 
 - Băm mật khẩu PBKDF2-HMAC-SHA256 với salt; khóa đăng nhập 15 phút sau nhiều lần sai; đổi session khi đăng nhập, logout hủy session.
-- Kiểm tra role ở Filter, quyền sở hữu lịch/bệnh án trong Service, CSRF cho POST; React hiển thị nội dung người dùng dưới dạng text và API loại bỏ password/hash/secret.
+- Kiểm tra role ở Filter, quyền sở hữu lịch/bệnh án trong Service, CSRF cho POST và escape nội dung ở JSP.
 - Đặt lịch khóa dòng patient và schedule trong transaction; không vượt sức chứa, tối đa 2 lịch chưa hoàn tất khi đặt online; đổi trước 12 giờ, tối đa 2 lần.
 - Hủy hơn 3 lần trong tháng tạm chặn đặt online 30 ngày. Hủy do bác sĩ nghỉ không tính như bệnh nhân chủ động hủy.
 - Check-in một lần/ngày hẹn, số chờ duy nhất theo ngày/phòng; ưu tiên khẩn cấp, người cao tuổi, sau đó giờ hẹn và số chờ.
@@ -169,11 +163,9 @@ Cấu hình DB qua biến môi trường hoặc file local như hướng dẫn p
 mvn test
 ```
 
-31 test Java chạy mặc định, gồm kiến trúc, Bean, PDF Unicode, tiến trình khám/JSON, bảo vệ dữ liệu API, callback VNPay và 10 trường hợp CSRF/session/phân quyền. 18 integration test trong `WorkflowTest`, `NamWorkflowTest`, `NamRevisionTest` chỉ chạy khi `HOSPITAL_INTEGRATION=1`, `DB_URL` trỏ vào **database riêng tên `hospital_test`**, đã nạp đủ schema/seed/05/06. Test chủ động ghi dữ liệu demo; không dùng database triển khai.
+23 test chạy mặc định, gồm kiến trúc, Java Bean, PDF Unicode, tiến trình khám/JSON và 7 trường hợp CSRF/session. 18 integration test trong `WorkflowTest`, `NamWorkflowTest`, `NamRevisionTest` chỉ chạy khi `HOSPITAL_INTEGRATION=1`, `DB_URL` trỏ vào **database riêng tên `hospital_test`**, đã nạp đủ schema/seed/05/06. Test chủ động ghi dữ liệu demo; không dùng database triển khai. Kiểm thử cả rollback tồn kho, đặt lịch đồng thời, hủy so với lập hóa đơn/thanh toán đồng thời và duyệt thu hồi đồng thời.
 
-Kiểm thử React: vào frontend, chạy `npm ci` rồi `npm test`. Bộ kiểm thử kiểm tra form/CSRF, giữ nội dung khi lỗi, chặn submit trùng, hiển thị text an toàn, khóa kê đơn khi đang chờ và xử lý lỗi API.
-
-`scripts/smoke_http.py` chạy với Python 3 trên app và database demo mới; kiểm tra hợp đồng JSON React, session/CSRF/phân quyền, trọn luồng khám, file xuất và HTML shell. Script dùng tài khoản demo, có ghi dữ liệu; không chạy trên dữ liệu thực.
+`scripts/smoke_http.py` chạy với Python 3 trên app đang chạy và database demo mới; kiểm tra HTTP, CSRF, phân quyền, các JSP, trọn luồng khám và file xuất. Script dùng tài khoản demo, có ghi dữ liệu; không chạy trên dữ liệu thực.
 
 Sau script trên, chạy `python scripts/smoke_nam_workflows.py http://localhost:3000/hospital` để kiểm tra thu hồi, tệp lưu lâu dài, nhập kết quả thay thế và thông báo. Cần tài khoản demo của script 06.
 
