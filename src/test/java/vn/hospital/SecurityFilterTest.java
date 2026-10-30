@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
-import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
@@ -15,8 +14,6 @@ class SecurityFilterTest {
   private static class Exchange {
     String method = "POST", path = "/login", location, forwarded;
     int status = 200, reached;
-    String pathInfo;
-    final StringWriter body = new StringWriter();
     boolean hasSession;
     final Map<String, Object> attributes = new HashMap<>(), requestAttributes = new HashMap<>();
     final Map<String, String> parameters = new HashMap<>();
@@ -40,17 +37,6 @@ class SecurityFilterTest {
               switch (m.getName()) {
                 case "getMethod" -> method;
                 case "getServletPath" -> path;
-                case "getPathInfo" -> pathInfo;
-                case "getAttribute" -> requestAttributes.get(a[0]);
-                case "getServletContext" ->
-                    proxy(
-                        ServletContext.class,
-                        (context, method, args) -> {
-                          if (method.getName().equals("getResourceAsStream"))
-                            return new ByteArrayInputStream("<div id=\"root\"></div>".getBytes());
-                          if (method.getName().equals("getAttribute")) return Map.of();
-                          return empty(method.getReturnType());
-                        });
                 case "getContextPath" -> "/hospital";
                 case "getParameter" -> parameters.get(a[0]);
                 case "getSession" -> {
@@ -93,7 +79,6 @@ class SecurityFilterTest {
                   location = (String) a[0];
                   yield null;
                 }
-                case "getWriter" -> new PrintWriter(body);
                 default -> empty(m.getReturnType());
               });
     }
@@ -133,43 +118,6 @@ class SecurityFilterTest {
   }
 
   @Test
-  void apiRoleCheckUsesTargetRouteInsteadOfApiPrefix() throws Exception {
-    var e = new Exchange();
-    e.authenticated();
-    e.method = "GET";
-    e.path = "/api";
-    e.pathInfo = "/reports";
-    e.run();
-    assertEquals(403, e.status);
-    assertEquals(0, e.reached);
-    assertTrue(e.body.toString().contains("\"page\":\"error\""));
-  }
-
-  @Test
-  void apiExpiredSessionReturnsJsonWithoutRunningPost() throws Exception {
-    var e = new Exchange();
-    e.path = "/api";
-    e.pathInfo = "/appointments";
-    e.parameters.put("csrf", "stale");
-    e.run();
-    assertEquals(401, e.status);
-    assertEquals(0, e.reached);
-    assertTrue(e.body.toString().contains("\"user\":null"));
-  }
-
-  @Test
-  void apiStillRequiresCsrfForAuthenticatedMutation() throws Exception {
-    var e = new Exchange();
-    e.authenticated();
-    e.path = "/api";
-    e.pathInfo = "/appointments";
-    e.parameters.put("csrf", "stale");
-    e.run();
-    assertEquals(403, e.status);
-    assertEquals(0, e.reached);
-  }
-
-  @Test
   void expiredProtectedFormDoesNotPerformMutation() throws Exception {
     var e = new Exchange();
     e.path = "/appointments";
@@ -188,7 +136,7 @@ class SecurityFilterTest {
     e.parameters.put("csrf", "old-token");
     e.run();
     assertEquals(403, e.status);
-    assertTrue(e.body.toString().contains("id=\"root\""));
+    assertEquals("/WEB-INF/views/error.jsp", e.forwarded);
     assertEquals(0, e.reached);
     assertEquals("current-token", e.attributes.get("csrf"));
   }

@@ -10,4 +10,3 @@ target/
 src/main/resources/application-local.properties
 __pycache__/
 *.pyc
-frontend/node_modules/

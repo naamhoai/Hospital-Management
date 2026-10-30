@@ -22,8 +22,7 @@ public abstract class BaseController extends HttpServlet {
 
   protected void view(HttpServletRequest r, HttpServletResponse s, String name)
       throws ServletException, IOException {
-    if (FrontendResponse.isApi(r)) FrontendResponse.page(r, s, name);
-    else FrontendResponse.shell(r, s);
+    r.getRequestDispatcher("/WEB-INF/views/" + name + ".jsp").forward(r, s);
   }
 
   protected void redirect(HttpServletRequest r, HttpServletResponse s, String path, String message)

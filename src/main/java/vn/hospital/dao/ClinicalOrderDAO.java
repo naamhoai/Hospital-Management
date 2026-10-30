@@ -103,17 +103,15 @@ public class ClinicalOrderDAO {
 
   public List<Map<String, Object>> worklist(Connection c, String keyword, String status)
       throws SQLException {
-    // Bản đã thu hồi chỉ nằm trong lịch sử; JOIN bản hiệu lực để không nhân đôi chỉ định.
     return Jdbc.list(
         c,
         "SELECT o.*,s.name service_name,u.full_name"
             + " patient_name,m.patient_id,m.doctor_id,t.result_id,t.result_data,t.conclusion,t.file_url"
             + " FROM clinical_order o JOIN service s USING(service_id) JOIN medical_record m"
-            + " USING(record_id) JOIN users u ON u.user_id=m.patient_id LEFT JOIN test_result t ON"
-            + " t.order_id=o.order_id AND t.status='APPROVED' WHERE (u.full_name LIKE ? OR"
-            + " CAST(o.order_id AS CHAR)=?) AND (?='' OR o.status=?) ORDER BY CASE WHEN"
-            + " o.payment_status='PAID' AND o.status IN ('PENDING','RESULT_RECALLED') THEN 0 ELSE 1"
-            + " END,o.order_id DESC LIMIT 100",
+            + " USING(record_id) JOIN users u ON u.user_id=m.patient_id LEFT JOIN test_result t"
+            + " USING(order_id) WHERE (u.full_name LIKE ? OR CAST(o.order_id AS CHAR)=?) AND (?=''"
+            + " OR o.status=?) ORDER BY CASE WHEN o.payment_status='PAID' AND o.status='PENDING'"
+            + " THEN 0 ELSE 1 END,o.order_id DESC LIMIT 100",
         "%" + keyword + "%",
         keyword,
         status,
