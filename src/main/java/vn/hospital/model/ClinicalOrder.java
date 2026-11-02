@@ -1,10 +1,9 @@
 package vn.hospital.model;
 
 import java.math.BigDecimal;
-import java.time.*;
-import java.util.*;
+import java.time.LocalDateTime;
 
-/** Java Bean mapped to the SDS domain or request/data model. */
+/** Dữ liệu nghiệp vụ hoặc dữ liệu trao đổi giữa các tầng của ứng dụng. */
 public class ClinicalOrder {
   private Integer orderId;
   private Integer recordId;

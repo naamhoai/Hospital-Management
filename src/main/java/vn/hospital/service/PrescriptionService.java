@@ -10,10 +10,6 @@ import vn.hospital.util.*;
 public class PrescriptionService {
   private final AuthUser actor;
 
-  public PrescriptionService() {
-    this(null);
-  }
-
   public PrescriptionService(AuthUser actor) {
     this.actor = actor;
   }
@@ -58,17 +54,17 @@ public class PrescriptionService {
     Actors.require(actor, "DOCTOR");
     List<PrescriptionDetail> items = validateItems(request);
     return Database.tx(
-        c -> {
+        connection -> {
           var record =
               EMRService.editable(
-                  new MedicalRecordDAO().findById(c, request.getRecordId()), actor, true);
+                  new MedicalRecordDAO().findById(connection, request.getRecordId()), actor, true);
           Checks.require(
               record.getDiagnosis() != null && !record.getDiagnosis().isBlank(),
               "Phải lưu chẩn đoán trước khi kê đơn.");
           Checks.require(
-              !new ClinicalOrderDAO().hasUnfinished(c, record.getRecordId()),
+              !new ClinicalOrderDAO().hasUnfinished(connection, record.getRecordId()),
               "Cần có đủ kết quả cận lâm sàng hoặc hủy chỉ định chưa thực hiện trước khi kê đơn.");
-          return new MedicationDAO().checkStock(c, items);
+          return new MedicationDAO().checkStock(connection, items);
         });
   }
 
@@ -88,19 +84,21 @@ public class PrescriptionService {
     }
     Prescription saved =
         Database.tx(
-            c -> {
+            connection -> {
               MedicalRecord record =
                   EMRService.editable(
-                      new MedicalRecordDAO().findById(c, request.getRecordId()), actor, true);
+                      new MedicalRecordDAO().findById(connection, request.getRecordId()),
+                      actor,
+                      true);
               Checks.require(
                   record.getDiagnosis() != null && !record.getDiagnosis().isBlank(),
                   "Phải lưu chẩn đoán trước khi kê đơn.");
               Checks.require(
-                  !new ClinicalOrderDAO().hasUnfinished(c, record.getRecordId()),
+                  !new ClinicalOrderDAO().hasUnfinished(connection, record.getRecordId()),
                   "Cần có đủ kết quả cận lâm sàng trước khi kê đơn.");
               var meds = new MedicationDAO();
               for (var item : items) {
-                Medication med = meds.findById(c, item.getMedicationId());
+                Medication med = meds.findById(connection, item.getMedicationId());
                 Checks.require(
                     med != null && med.getStockQuantity() >= item.getQuantity(),
                     "Thuốc không khả dụng hoặc không đủ tồn kho: #" + item.getMedicationId());
@@ -110,11 +108,12 @@ public class PrescriptionService {
               var rx = new Prescription();
               rx.setRecordId(record.getRecordId());
               rx.setAdvice(request.getAdvice());
-              Prescription result = new PrescriptionDAO().saveWithDetails(c, rx, items);
+              Prescription result = new PrescriptionDAO().saveWithDetails(connection, rx, items);
               for (var item : items)
-                Checks.require(meds.deductStock(c, item), "Tồn kho đã thay đổi. Vui lòng thử lại.");
+                Checks.require(
+                    meds.deductStock(connection, item), "Tồn kho đã thay đổi. Vui lòng thử lại.");
               AuditDAO.record(
-                  c,
+                  connection,
                   actor.getUserId(),
                   "ISSUE_PRESCRIPTION",
                   "prescription",
@@ -139,10 +138,10 @@ public class PrescriptionService {
   public Map<String, Object> prescriptionPage(Integer id) {
     Actors.require(actor, "DOCTOR", "PATIENT");
     return Database.read(
-        c -> {
-          Prescription rx = new PrescriptionDAO().findById(c, id);
+        connection -> {
+          Prescription rx = new PrescriptionDAO().findById(connection, id);
           Checks.require(rx != null, "Không tìm thấy đơn thuốc.");
-          MedicalRecord record = new MedicalRecordDAO().findByIdRead(c, rx.getRecordId());
+          MedicalRecord record = new MedicalRecordDAO().findByIdRead(connection, rx.getRecordId());
           Checks.require(
               record != null
                   && (actor.is("PATIENT")
@@ -151,9 +150,11 @@ public class PrescriptionService {
               "Bạn không được xem đơn thuốc này.");
           Map<String, Object> page = new LinkedHashMap<>();
           page.put("prescription", rx);
-          page.put("doctorName", new MedicalRecordDAO().doctorName(c, record.getDoctorId()));
+          page.put(
+              "doctorName", new MedicalRecordDAO().doctorName(connection, record.getDoctorId()));
           page.put("record", record);
-          page.put("patient", new MedicalRecordDAO().patientProfile(c, record.getPatientId()));
+          page.put(
+              "patient", new MedicalRecordDAO().patientProfile(connection, record.getPatientId()));
           return page;
         });
   }
@@ -183,24 +184,5 @@ public class PrescriptionService {
     }
     rows.add(Map.of("Lời dặn", rx.getAdvice() == null ? "" : rx.getAdvice()));
     return new ReportExportService().createPDF("ĐƠN THUỐC #" + id, rows);
-  }
-
-  public long issuePrescription(
-      AuthUser doctor, long record, List<PrescriptionItem> items, String advice) {
-    var request = new PrescriptionRequest();
-    request.setRecordId(Actors.id(record));
-    request.setAdvice(advice);
-    request.setItems(
-        items.stream()
-            .map(
-                i -> {
-                  var d = new PrescriptionDetail();
-                  d.setMedicationId(Actors.id(i.medicationId()));
-                  d.setQuantity(i.quantity());
-                  d.setDosage(i.dosage());
-                  return d;
-                })
-            .toList());
-    return new PrescriptionService(doctor).issuePrescription(request).getPrescriptionId();
   }
 }

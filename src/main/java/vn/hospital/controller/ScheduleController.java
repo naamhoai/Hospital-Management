@@ -6,36 +6,42 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import vn.hospital.service.*;
 import vn.hospital.service.ScheduleService;
+import vn.hospital.util.BusinessException;
 
 @WebServlet("/schedules")
 public class ScheduleController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s)
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    r.setAttribute(
+    request.setAttribute(
         "schedules",
-        new ScheduleService().findDoctorSchedules(user(r).getRole(), user(r).getUserId()));
-    r.setAttribute(
-        "doctors", new ScheduleService().findActiveDoctors(user(r).getRole(), user(r).getUserId()));
-    view(r, s, "schedules");
+        new ScheduleService()
+            .findDoctorSchedules(user(request).getRole(), user(request).getUserId()));
+    request.setAttribute(
+        "doctors",
+        new ScheduleService()
+            .findActiveDoctors(user(request).getRole(), user(request).getUserId()));
+    view(request, response, "schedules");
   }
 
-  protected void doPost(HttpServletRequest r, HttpServletResponse s) throws IOException {
+  protected void doPost(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
     var service = new ScheduleService();
-    switch (p(r, "action")) {
+    switch (param(request, "action")) {
       case "create" ->
           service.createSchedule(
-              user(r),
-              id(r, "doctorId"),
-              p(r, "date"),
-              p(r, "shift"),
-              p(r, "start"),
-              p(r, "end"),
-              (int) id(r, "capacity"));
+              user(request),
+              id(request, "doctorId"),
+              param(request, "date"),
+              param(request, "shift"),
+              param(request, "start"),
+              param(request, "end"),
+              (int) id(request, "capacity"));
       case "capacity" ->
-          service.adjustCapacity(user(r), id(r, "scheduleId"), (int) id(r, "capacity"));
-      case "leave" -> service.requestLeave(user(r), id(r, "scheduleId"));
-      default -> throw new vn.hospital.util.BusinessException("Thao tác không hợp lệ.");
+          service.adjustCapacity(
+              user(request), id(request, "scheduleId"), (int) id(request, "capacity"));
+      case "leave" -> service.requestLeave(user(request), id(request, "scheduleId"));
+      default -> throw new BusinessException("Thao tác không hợp lệ.");
     }
-    redirect(r, s, "/schedules", "Đã cập nhật ca khám.");
+    redirect(request, response, "/schedules", "Đã cập nhật ca khám.");
   }
 }

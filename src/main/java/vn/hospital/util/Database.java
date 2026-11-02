@@ -31,6 +31,7 @@ public final class Database {
     T run(Connection c) throws Exception;
   }
 
+  /** Nhiều bước nghiệp vụ cùng commit; nếu một bước lỗi thì rollback để tránh dữ liệu dở dang. */
   public static <T> T tx(Work<T> work) {
     try (Connection c = open()) {
       c.setAutoCommit(false);
@@ -48,6 +49,7 @@ public final class Database {
     }
   }
 
+  /** Truy vấn chỉ đọc dùng cho danh sách và báo cáo, không ghi lại dữ liệu khám. */
   public static <T> T read(Work<T> work) {
     try (Connection c = open()) {
       c.setReadOnly(true);

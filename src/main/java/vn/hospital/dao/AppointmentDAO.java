@@ -2,6 +2,7 @@ package vn.hospital.dao;
 
 import java.sql.*;
 import java.util.*;
+import vn.hospital.model.Appointment;
 import vn.hospital.util.Database;
 
 public class AppointmentDAO {
@@ -105,11 +106,11 @@ public class AppointmentDAO {
             + " appointment_date<CURDATE()");
   }
 
-  public vn.hospital.model.Appointment findById(Integer id) {
+  public Appointment findById(Integer id) {
     return Database.read(
         c ->
             BeanMapper.map(
                 Jdbc.one(c, "SELECT * FROM appointment WHERE appointment_id=?", id),
-                vn.hospital.model.Appointment.class));
+                Appointment.class));
   }
 }

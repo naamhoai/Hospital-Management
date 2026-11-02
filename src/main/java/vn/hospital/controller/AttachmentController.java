@@ -9,11 +9,13 @@ import vn.hospital.util.Actors;
 
 @WebServlet("/attachments")
 public class AttachmentController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s) throws IOException {
-    File file = new ClinicalService(user(r)).getAttachment(Actors.id(id(r, "resultId")));
-    s.setContentType(Files.probeContentType(file.toPath()));
-    s.setHeader("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"");
-    s.setContentLengthLong(file.length());
-    Files.copy(file.toPath(), s.getOutputStream());
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
+    File file =
+        new ClinicalService(user(request)).getAttachment(Actors.id(id(request, "resultId")));
+    response.setContentType(Files.probeContentType(file.toPath()));
+    response.setHeader("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"");
+    response.setContentLengthLong(file.length());
+    Files.copy(file.toPath(), response.getOutputStream());
   }
 }

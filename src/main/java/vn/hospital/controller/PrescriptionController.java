@@ -11,23 +11,28 @@ import vn.hospital.util.*;
 
 @WebServlet("/prescriptions")
 public class PrescriptionController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s)
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    var service = new PrescriptionService(user(r));
-    Integer id = Actors.id(id(r, "id"));
-    if (p(r, "format").equals("pdf")) {
-      download(s, service.printPrescription(id), "application/pdf", "prescription-" + id + ".pdf");
+    var service = new PrescriptionService(user(request));
+    Integer id = Actors.id(id(request, "id"));
+    if (param(request, "format").equals("pdf")) {
+      download(
+          response,
+          service.printPrescription(id),
+          "application/pdf",
+          "prescription-" + id + ".pdf");
       return;
     }
-    service.prescriptionPage(id).forEach(r::setAttribute);
-    view(r, s, "prescription");
+    service.prescriptionPage(id).forEach(request::setAttribute);
+    view(request, response, "prescription");
   }
 
-  protected void doPost(HttpServletRequest r, HttpServletResponse s) throws IOException {
-    Actors.require(user(r), "DOCTOR");
-    String[] meds = r.getParameterValues("medicationId"),
-        quantities = r.getParameterValues("quantity"),
-        dosages = r.getParameterValues("dosage");
+  protected void doPost(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
+    Actors.require(user(request), "DOCTOR");
+    String[] meds = request.getParameterValues("medicationId"),
+        quantities = request.getParameterValues("quantity"),
+        dosages = request.getParameterValues("dosage");
     Checks.require(
         meds != null
             && quantities != null
@@ -44,12 +49,13 @@ public class PrescriptionController extends BaseController {
       d.setDosage(dosages[i]);
       items.add(d);
     }
-    var request = new PrescriptionRequest();
-    request.setRecordId(Actors.id(id(r, "recordId")));
-    request.setItems(items);
-    request.setAdvice(p(r, "advice"));
-    request.setOverrideInteractions("true".equals(p(r, "overrideInteractions")));
-    var rx = new PrescriptionService(user(r)).issuePrescription(request);
-    redirect(r, s, "/prescriptions?id=" + rx.getPrescriptionId(), "Đã tạo đơn thuốc.");
+    var prescriptionRequest = new PrescriptionRequest();
+    prescriptionRequest.setRecordId(Actors.id(id(request, "recordId")));
+    prescriptionRequest.setItems(items);
+    prescriptionRequest.setAdvice(param(request, "advice"));
+    prescriptionRequest.setOverrideInteractions(
+        "true".equals(param(request, "overrideInteractions")));
+    var rx = new PrescriptionService(user(request)).issuePrescription(prescriptionRequest);
+    redirect(request, response, "/prescriptions?id=" + rx.getPrescriptionId(), "Đã tạo đơn thuốc.");
   }
 }

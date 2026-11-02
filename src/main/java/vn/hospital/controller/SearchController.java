@@ -8,11 +8,11 @@ import vn.hospital.service.SearchService;
 
 @WebServlet("/search")
 public class SearchController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s)
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     new SearchService()
-        .searchDoctorsAndServices(p(r, "keyword"), p(r, "date"))
-        .forEach(r::setAttribute);
-    view(r, s, "search");
+        .searchDoctorsAndServices(param(request, "keyword"), param(request, "date"))
+        .forEach(request::setAttribute);
+    view(request, response, "search");
   }
 }

@@ -3,12 +3,12 @@ package vn.hospital.listener;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebListener;
 import java.util.concurrent.*;
+import vn.hospital.service.MaintenanceService;
 
 @WebListener
 public class BackgroundJobs implements ServletContextListener {
   private ScheduledExecutorService executor;
-  private final vn.hospital.service.MaintenanceService maintenance =
-      new vn.hospital.service.MaintenanceService();
+  private final MaintenanceService maintenance = new MaintenanceService();
 
   public void contextInitialized(ServletContextEvent event) {
     executor =

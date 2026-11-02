@@ -1,7 +1,7 @@
 USE hospital;
 INSERT INTO roles(role_id,name,description) VALUES
 (1,'ADMIN','Quản trị'),(2,'MANAGER','Quản lý'),(3,'CASHIER','Thu ngân'),
-(4,'RECEPTIONIST','Lễ tân'),(5,'LAB_TECHNICIAN','Kỹ thuật viên'),(6,'DOCTOR','Bác sĩ'),(7,'PATIENT','Bệnh nhân');
+(4,'RECEPTIONIST','Lễ tân'),(5,'LAB_TECHNICIAN','Kỹ thuật viên'),(6,'DOCTOR','Bác sĩ'),(7,'PATIENT','Bệnh nhân'),(8,'DEPARTMENT_HEAD','Trưởng khoa');
 INSERT INTO users(user_id,role_id,email,password,full_name,phone_number) VALUES
 (1,1,'admin@hospital.test','pbkdf2$210000$Z3JvdXA2LWRlbW8tc2VlZCE=$2/ePogmsO1Oc6GhEiU1HKIfrnQiSRn7XG6yJ4klQuyQ=','Quản trị Demo','0900000001'),
 (2,2,'manager@hospital.test','pbkdf2$210000$Z3JvdXA2LWRlbW8tc2VlZCE=$2/ePogmsO1Oc6GhEiU1HKIfrnQiSRn7XG6yJ4klQuyQ=','Quản lý Demo','0900000002'),
@@ -49,3 +49,12 @@ INSERT INTO work_schedule(doctor_id,work_date,shift,start_time,end_time,max_slot
 INSERT INTO work_schedule(doctor_id,work_date,shift,start_time,end_time,max_slots) VALUES(7,DATE_ADD(CURDATE(),INTERVAL 8 DAY),'MORNING','08:00','12:00',10);
 INSERT INTO work_schedule(doctor_id,work_date,shift,start_time,end_time,max_slots) VALUES(7,DATE_ADD(CURDATE(),INTERVAL 8 DAY),'AFTERNOON','13:00','17:00',10);
 INSERT INTO work_schedule(doctor_id,work_date,shift,start_time,end_time,max_slots) VALUES(7,DATE_ADD(CURDATE(),INTERVAL 8 DAY),'EVENING','18:00','23:00',10);
+
+-- Tài khoản trưởng khoa giả lập để kiểm tra quyền duyệt thu hồi kết quả.
+USE hospital;
+INSERT INTO users(role_id,email,password,full_name,phone_number)
+SELECT role_id,'head@hospital.test','pbkdf2$210000$Z3JvdXA2LWRlbW8tc2VlZCE=$2/ePogmsO1Oc6GhEiU1HKIfrnQiSRn7XG6yJ4klQuyQ=','Trưởng khoa Nội Demo','0900000011'
+FROM roles WHERE name='DEPARTMENT_HEAD' AND NOT EXISTS(SELECT 1 FROM users WHERE email='head@hospital.test');
+INSERT INTO doctors(doctor_id,department_id,room_number,academic_title,experience_years)
+SELECT user_id,1,'P102','Trưởng khoa',12 FROM users WHERE email='head@hospital.test'
+AND NOT EXISTS(SELECT 1 FROM doctors WHERE doctor_id=users.user_id);

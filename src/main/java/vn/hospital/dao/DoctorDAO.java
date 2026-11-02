@@ -2,6 +2,7 @@ package vn.hospital.dao;
 
 import java.sql.*;
 import java.util.*;
+import vn.hospital.model.Doctor;
 import vn.hospital.util.Database;
 
 public class DoctorDAO {
@@ -26,11 +27,10 @@ public class DoctorDAO {
         values);
   }
 
-  public vn.hospital.model.Doctor findById(Integer id) {
+  public Doctor findById(Integer id) {
     return Database.read(
         c ->
             BeanMapper.map(
-                Jdbc.one(c, "SELECT * FROM doctors WHERE doctor_id=?", id),
-                vn.hospital.model.Doctor.class));
+                Jdbc.one(c, "SELECT * FROM doctors WHERE doctor_id=?", id), Doctor.class));
   }
 }

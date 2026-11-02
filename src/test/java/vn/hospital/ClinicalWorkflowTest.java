@@ -15,7 +15,7 @@ import vn.hospital.service.*;
 import vn.hospital.util.*;
 
 @EnabledIfEnvironmentVariable(named = "HOSPITAL_INTEGRATION", matches = "1")
-class NamWorkflowTest {
+class ClinicalWorkflowTest {
   private final AuthUser doctor = new AuthUser(6, "Doctor", "DOCTOR"),
       other = new AuthUser(7, "Other", "DOCTOR"),
       lab = new AuthUser(5, "Lab", "LAB_TECHNICIAN"),

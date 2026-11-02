@@ -15,7 +15,7 @@ import vn.hospital.util.*;
 
 /** Runs only against the explicitly prepared disposable hospital_test database. */
 @EnabledIfEnvironmentVariable(named = "HOSPITAL_INTEGRATION", matches = "1")
-class WorkflowTest {
+class HospitalWorkflowTest {
   private final AuthUser doctor = new AuthUser(6, "Doctor", "DOCTOR"),
       reception = new AuthUser(4, "Reception", "RECEPTIONIST"),
       cashier = new AuthUser(3, "Cashier", "CASHIER"),
@@ -64,16 +64,44 @@ class WorkflowTest {
         });
   }
 
+  private BigDecimal todayRevenue() {
+    var filter = new ReportFilter();
+    filter.setFromDate(LocalDate.now());
+    filter.setToDate(LocalDate.now());
+    filter.setPaymentMethod("CASH");
+    return new AnalyticsService(new AuthUser(2, "Manager", "MANAGER"))
+        .getRevenueReport(filter).getRows().stream()
+            .map(RevenueRow::getTotalRevenue)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+  }
+
+  private TestResult result(String data, String conclusion) {
+    var result = new TestResult();
+    result.setResultData(data);
+    result.setConclusion(conclusion);
+    return result;
+  }
+
+  private PrescriptionDetail medicine(int medicationId, int quantity) {
+    var detail = new PrescriptionDetail();
+    detail.setMedicationId(medicationId);
+    detail.setQuantity(quantity);
+    detail.setDosage("Liều dùng demo");
+    return detail;
+  }
+
+  private PrescriptionRequest prescription(long recordId, List<PrescriptionDetail> items) {
+    var request = new PrescriptionRequest();
+    request.setRecordId(Actors.id(recordId));
+    request.setItems(items);
+    request.setAdvice("Lời dặn demo");
+    return request;
+  }
+
   @Test
   void completeHospitalJourneyAndBusinessGuards() {
     assertNotNull(new SearchService().searchDoctorsAndServices("", ""));
-    BigDecimal baseline =
-        new AnalyticsService(new AuthUser(2, "Manager", "MANAGER"))
-                .generateReport(
-                    "revenue", LocalDate.now().toString(), LocalDate.now().toString(), "CASH")
-                .stream()
-                .map(x -> (BigDecimal) x.get("total_revenue"))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal baseline = todayRevenue();
     assertEquals("DOCTOR", new AuthService().login("doctor@hospital.test", "Demo@1234").getRole());
     assertThrows(
         BusinessException.class, () -> new AuthService().login("doctor@hospital.test", "wrong"));
@@ -86,37 +114,40 @@ class WorkflowTest {
     assertThrows(
         BusinessException.class, () -> new QueueService().checkIn(reception, appt, "STANDARD"));
     assertEquals(queue, new QueueService().callNext(doctor));
-    var emr = new EMRService();
-    long record = emr.getRecord(doctor, queue).getRecordId();
+    var emr = new EMRService(doctor);
+    long record = emr.getRecord(Actors.id(queue)).getRecordId();
     assertThrows(
         BusinessException.class,
-        () -> emr.getRecord(new AuthUser(7, "Other doctor", "DOCTOR"), queue));
+        () ->
+            new EMRService(new AuthUser(7, "Other doctor", "DOCTOR")).getRecord(Actors.id(queue)));
     assertThrows(
         BusinessException.class,
         () ->
             emr.recordClinicalDiagnosis(
-                doctor, queue, new DiagnosisRequest("Symptoms", "INVALID", "Diagnosis", "")));
+                Actors.id(queue), new DiagnosisRequest("Symptoms", "INVALID", "Diagnosis", "")));
     emr.recordClinicalDiagnosis(
-        doctor, queue, new DiagnosisRequest("Symptoms", "J00", "Demo diagnosis", "Test notes"));
-    new ClinicalService().createClinicalOrders(doctor, record, new long[] {2}, "Demo test");
+        Actors.id(queue), new DiagnosisRequest("Symptoms", "J00", "Demo diagnosis", "Test notes"));
+    new ClinicalService(doctor)
+        .createClinicalOrders(new ClinicalOrderRequest(Actors.id(record), List.of(2), "Demo test"));
     long order =
         Jdbc.number(
             Jdbc.read("SELECT order_id FROM clinical_order WHERE record_id=?", record).get(0),
             "order_id");
     assertThrows(
         BusinessException.class,
-        () -> new ClinicalService().recordTestResult(lab, order, "Result", "", ""));
-    assertThrows(BusinessException.class, () -> emr.closeRecord(doctor, queue));
+        () -> new ClinicalService(lab).recordTestResult(Actors.id(order), result("Result", "")));
+    assertThrows(BusinessException.class, () -> emr.closeRecord(Actors.id(queue)));
     long firstInvoice = new BillingService().createInvoice(cashier, record);
     assertEquals(firstInvoice, new BillingService().createInvoice(cashier, record));
     new BillingService().processCashPayment(cashier, firstInvoice);
     assertThrows(
         BusinessException.class,
         () -> new BillingService().processCashPayment(cashier, firstInvoice));
-    new ClinicalService().recordTestResult(lab, order, "Demo result", "Demo conclusion", "");
+    new ClinicalService(lab)
+        .recordTestResult(Actors.id(order), result("Demo result", "Demo conclusion"));
     assertThrows(
         BusinessException.class,
-        () -> new ClinicalService().recordTestResult(lab, order, "Changed", "", ""));
+        () -> new ClinicalService(lab).recordTestResult(Actors.id(order), result("Changed", "")));
     long stock =
         Jdbc.number(
             Jdbc.read("SELECT stock_quantity FROM medication WHERE medication_id=1").get(0),
@@ -124,33 +155,28 @@ class WorkflowTest {
     assertThrows(
         BusinessException.class,
         () ->
-            new PrescriptionService()
+            new PrescriptionService(doctor)
                 .issuePrescription(
-                    doctor,
-                    record,
-                    List.of(
-                        new PrescriptionItem(1, 2, "Demo"), new PrescriptionItem(2, 1000, "Demo")),
-                    ""));
+                    prescription(record, List.of(medicine(1, 2), medicine(2, 1000)))));
     assertEquals(
         stock,
         Jdbc.number(
             Jdbc.read("SELECT stock_quantity FROM medication WHERE medication_id=1").get(0),
             "stock_quantity"),
         "Failed multi-item prescription must roll back stock changes");
-    new PrescriptionService()
-        .issuePrescription(
-            doctor, record, List.of(new PrescriptionItem(1, 2, "Demo dosage")), "Demo advice");
+    new PrescriptionService(doctor)
+        .issuePrescription(prescription(record, List.of(medicine(1, 2))));
     long secondInvoice = new BillingService().createInvoice(cashier, record);
     assertNotEquals(firstInvoice, secondInvoice);
     new BillingService().processCashPayment(cashier, secondInvoice);
     assertThrows(
         BusinessException.class, () -> new BillingService().createInvoice(cashier, record));
-    emr.closeRecord(doctor, queue);
+    emr.closeRecord(Actors.id(queue));
     assertThrows(
         BusinessException.class,
         () ->
             emr.recordClinicalDiagnosis(
-                doctor, queue, new DiagnosisRequest("Changed", "J00", "Changed", "")));
+                Actors.id(queue), new DiagnosisRequest("Changed", "J00", "Changed", "")));
     new FeedbackService().submitFeedback(8, record, 5, "Good demo");
     assertThrows(
         BusinessException.class,
@@ -158,14 +184,7 @@ class WorkflowTest {
     assertThrows(
         BusinessException.class,
         () -> new FeedbackService().submitFeedback(9, record, 5, "Not my record"));
-    var revenue =
-        new AnalyticsService(new AuthUser(2, "Manager", "MANAGER"))
-            .generateReport(
-                "revenue", LocalDate.now().toString(), LocalDate.now().toString(), "CASH");
-    BigDecimal total =
-        revenue.stream()
-            .map(x -> (BigDecimal) x.get("total_revenue"))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal total = todayRevenue();
     assertEquals(0, total.subtract(baseline).compareTo(new BigDecimal("242000.00")));
   }
 

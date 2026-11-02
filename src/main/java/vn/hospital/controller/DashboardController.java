@@ -7,8 +7,8 @@ import java.io.IOException;
 
 @WebServlet(urlPatterns = {"", "/dashboard"})
 public class DashboardController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s)
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    view(r, s, "dashboard");
+    view(request, response, "dashboard");
   }
 }

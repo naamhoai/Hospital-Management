@@ -9,8 +9,8 @@ public class MaintenanceService {
 
   public void run() {
     Database.tx(
-        c -> {
-          new AppointmentDAO().markNoShows(c);
+        connection -> {
+          new AppointmentDAO().markNoShows(connection);
           return null;
         });
     reportBatch.summarizePreviousDay();
@@ -28,8 +28,8 @@ public class MaintenanceService {
       }
       boolean ok = sent;
       Database.tx(
-          c -> {
-            dao.recordDelivery(c, row.get("id"), ok);
+          connection -> {
+            dao.recordDelivery(connection, row.get("id"), ok);
             return null;
           });
     }

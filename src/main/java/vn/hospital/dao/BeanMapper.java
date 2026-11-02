@@ -7,7 +7,7 @@ import java.sql.*;
 import java.time.*;
 import java.util.*;
 
-/** Database rows are mapped here, never in Servlet controllers or JSPs. */
+/** Ánh xạ dòng database sang Java Bean tại DAO, không xử lý trong Servlet hay JSP. */
 public final class BeanMapper {
   private BeanMapper() {}
 

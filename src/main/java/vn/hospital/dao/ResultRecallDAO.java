@@ -4,6 +4,7 @@ import java.sql.*;
 import java.util.List;
 import vn.hospital.model.ResultRecallRequest;
 import vn.hospital.util.Actors;
+import vn.hospital.util.BusinessException;
 
 public class ResultRecallDAO {
   private static final String DETAILS =
@@ -72,7 +73,7 @@ public class ResultRecallDAO {
     } catch (SQLIntegrityConstraintViolationException error) {
       // UNIQUE cũng bảo vệ trường hợp hai đề nghị cùng đến trước khi giao diện kịp cập nhật.
       if (error.getErrorCode() == 1062)
-        throw new vn.hospital.util.BusinessException("Kết quả đã có đề nghị đang chờ duyệt.");
+        throw new BusinessException("Kết quả đã có đề nghị đang chờ duyệt.");
       throw error;
     }
   }

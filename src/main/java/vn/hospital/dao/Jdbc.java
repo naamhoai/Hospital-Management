@@ -7,6 +7,7 @@ import vn.hospital.util.Database;
 public final class Jdbc {
   private Jdbc() {}
 
+  /** Gán tham số bằng PreparedStatement, không ghép dữ liệu người dùng vào câu SQL. */
   private static PreparedStatement prepare(Connection c, String sql, Object... args)
       throws SQLException {
     PreparedStatement p = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -14,6 +15,7 @@ public final class Jdbc {
     return p;
   }
 
+  /** Chuyển từng dòng kết quả thành Map cho các màn hình có nhiều bảng JOIN. */
   public static List<Map<String, Object>> list(Connection c, String sql, Object... args)
       throws SQLException {
     try (var p = prepare(c, sql, args);

@@ -5,7 +5,7 @@ import vn.hospital.dao.QueueDAO;
 import vn.hospital.model.QueueContext;
 import vn.hospital.util.Database;
 
-/** Read-only boundary between operations and clinical EMR. */
+/** Đọc thông tin lượt chờ từ khối vận hành để khối bệnh án kiểm tra phân công bác sĩ. */
 public class QueueContextPort {
   public QueueContext getContext(Integer queueId) {
     return Database.tx(c -> getContext(c, queueId));

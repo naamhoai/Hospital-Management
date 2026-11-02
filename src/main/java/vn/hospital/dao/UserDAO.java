@@ -2,6 +2,7 @@ package vn.hospital.dao;
 
 import java.sql.*;
 import java.util.*;
+import vn.hospital.model.User;
 import vn.hospital.util.Database;
 
 public class UserDAO {
@@ -26,11 +27,8 @@ public class UserDAO {
     Jdbc.update(c, "UPDATE users SET failed_attempts=0,locked_until=NULL WHERE user_id=?", id);
   }
 
-  public vn.hospital.model.User findById(Integer id) {
+  public User findById(Integer id) {
     return Database.read(
-        c ->
-            BeanMapper.map(
-                Jdbc.one(c, "SELECT * FROM users WHERE user_id=?", id),
-                vn.hospital.model.User.class));
+        c -> BeanMapper.map(Jdbc.one(c, "SELECT * FROM users WHERE user_id=?", id), User.class));
   }
 }

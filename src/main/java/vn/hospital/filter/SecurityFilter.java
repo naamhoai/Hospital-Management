@@ -65,7 +65,7 @@ public class SecurityFilter implements Filter {
       boolean valid = expected instanceof String token && token.equals(submitted);
       if (!valid) {
         if (user == null) {
-          // A 303 changes the stale POST into a fresh GET; never replay submitted data.
+          // Mã 303 chuyển form POST cũ về GET mới; không tự gửi lại dữ liệu đã nhập.
           s.setStatus(HttpServletResponse.SC_SEE_OTHER);
           s.setHeader("Location", r.getContextPath() + "/login?reason=session-expired");
         } else if (path.equals("/login") || path.equals("/logout")) {

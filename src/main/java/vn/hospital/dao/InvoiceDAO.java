@@ -2,6 +2,7 @@ package vn.hospital.dao;
 
 import java.sql.*;
 import java.util.*;
+import vn.hospital.model.Invoice;
 import vn.hospital.util.Database;
 
 public class InvoiceDAO {
@@ -87,35 +88,33 @@ public class InvoiceDAO {
         values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findInvoiceLines(Object... values) {
+  public List<Map<String, Object>> findInvoiceLines(Object... values) {
     return Jdbc.read(
         "SELECT *,quantity*unit_price amount FROM invoice_line WHERE invoice_id=?", values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findInvoiceDetails(Object... values) {
+  public List<Map<String, Object>> findInvoiceDetails(Object... values) {
     return Jdbc.read(
         "SELECT i.*,u.full_name patient_name FROM invoice i JOIN users u ON u.user_id=i.patient_id"
             + " WHERE invoice_id=?",
         values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findBillableRecords(Object... values) {
+  public List<Map<String, Object>> findBillableRecords(Object... values) {
     return Jdbc.read(
         "SELECT m.record_id,u.full_name patient_name,m.diagnosis FROM medical_record m JOIN users u"
             + " ON u.user_id=m.patient_id ORDER BY record_id DESC",
         values);
   }
 
-  public vn.hospital.model.Invoice findById(Integer id) {
+  public Invoice findById(Integer id) {
     return Database.read(
         c ->
             BeanMapper.map(
-                Jdbc.one(c, "SELECT * FROM invoice WHERE invoice_id=?", id),
-                vn.hospital.model.Invoice.class));
+                Jdbc.one(c, "SELECT * FROM invoice WHERE invoice_id=?", id), Invoice.class));
   }
 
-  public java.util.List<java.util.Map<String, Object>> findByPatient(Connection c, long patient)
-      throws SQLException {
+  public List<Map<String, Object>> findByPatient(Connection c, long patient) throws SQLException {
     return Jdbc.list(
         c,
         "SELECT invoice_id,invoice_code,record_id,total_amount,status,payment_method,paid_at FROM"
@@ -138,8 +137,7 @@ public class InvoiceDAO {
         != null;
   }
 
-  public vn.hospital.model.Invoice lockForClinicalOrder(Connection c, int recordId, int orderId)
-      throws SQLException {
+  public Invoice lockForClinicalOrder(Connection c, int recordId, int orderId) throws SQLException {
     // Khóa hóa đơn trước dòng phí; đọc hiện tại để thấy hóa đơn vừa được lập ở giao dịch khác.
     Jdbc.list(
         c,
@@ -153,7 +151,7 @@ public class InvoiceDAO {
             orderId);
     if (row == null) return null;
     long invoiceId = ((Number) row.get("invoice_id")).longValue();
-    return BeanMapper.map(findById(c, invoiceId), vn.hospital.model.Invoice.class);
+    return BeanMapper.map(findById(c, invoiceId), Invoice.class);
   }
 
   public void removeClinicalLine(Connection c, int invoiceId, int orderId) throws SQLException {

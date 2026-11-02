@@ -7,7 +7,7 @@ import java.util.*;
 import vn.hospital.model.PrescriptionDetail;
 import vn.hospital.util.*;
 
-/** Optional external pharmacy adapter. An unconfigured provider is never reported as synced. */
+/** Kết nối dược bên ngoài là tùy chọn; chưa cấu hình thì không báo đã đồng bộ. */
 public class PharmacyClient {
   public boolean isConfigured() {
     return !Config.get("PHARMACY_BASE_URL").isBlank();

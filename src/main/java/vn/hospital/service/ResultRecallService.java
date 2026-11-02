@@ -26,26 +26,29 @@ public class ResultRecallService {
     Actors.require(actor, "DOCTOR", "LAB_TECHNICIAN");
     String validReason = Checks.text(reason, 255, "Lý do thu hồi");
     return Database.tx(
-        c -> {
-          ClinicalOrder order = lockOrderForResult(c, resultId);
-          MedicalRecord record = records.findByIdRead(c, order.getRecordId());
+        connection -> {
+          ClinicalOrder order = lockOrderForResult(connection, resultId);
+          MedicalRecord record = records.findByIdRead(connection, order.getRecordId());
           if (actor.is("DOCTOR"))
             Checks.require(
                 record.getDoctorId().longValue() == actor.getUserId(), "Bệnh án không thuộc bạn.");
-          TestResult result = results.findByIdForUpdate(c, resultId);
+          TestResult result = results.findByIdForUpdate(connection, resultId);
           Checks.require(
               result != null && "APPROVED".equals(result.getStatus()),
               "Chỉ đề nghị thu hồi kết quả đang có hiệu lực.");
-          Checks.require(!recalls.hasPending(c, resultId), "Kết quả đã có đề nghị đang chờ duyệt.");
-          int requestId = recalls.create(c, resultId, actor.getUserId(), validReason);
-          AuditDAO.record(c, actor.getUserId(), "REQUEST_RESULT_RECALL", "test_result", resultId);
+          Checks.require(
+              !recalls.hasPending(connection, resultId), "Kết quả đã có đề nghị đang chờ duyệt.");
+          int requestId = recalls.create(connection, resultId, actor.getUserId(), validReason);
+          AuditDAO.record(
+              connection, actor.getUserId(), "REQUEST_RESULT_RECALL", "test_result", resultId);
           return requestId;
         });
   }
 
   public List<ResultRecallRequest> listRequests() {
     Actors.require(actor, "DEPARTMENT_HEAD");
-    return Database.read(c -> recalls.findByDepartment(c, requireHeadDepartment(c)));
+    return Database.read(
+        connection -> recalls.findByDepartment(connection, requireHeadDepartment(connection)));
   }
 
   /** Chỉ trưởng khoa của dịch vụ xét nghiệm được phê duyệt; biên bản PDF được lưu cùng phiếu. */
@@ -57,47 +60,52 @@ public class ResultRecallService {
     String proof = approve ? storage.save(signedReport) : null;
     try {
       Database.tx(
-          c -> {
-            ResultRecallRequest request = recalls.findById(c, requestId);
+          connection -> {
+            ResultRecallRequest request = recalls.findById(connection, requestId);
             Checks.require(request != null, "Không tìm thấy đề nghị.");
-            ClinicalOrder order = lockOrderForResult(c, request.getResultId());
+            ClinicalOrder order = lockOrderForResult(connection, request.getResultId());
             // Đọc lại sau khi khóa để hai người không thể duyệt cùng một phiếu.
-            request = recalls.findById(c, requestId);
-            requireReviewPermission(c, request);
+            request = recalls.findById(connection, requestId);
+            requireReviewPermission(connection, request);
             Checks.require("PENDING".equals(request.getStatus()), "Đề nghị đã được xử lý.");
             Checks.require(
                 request.getRequestedBy().longValue() != actor.getUserId(),
                 "Không tự phê duyệt đề nghị của mình.");
-            TestResult original = results.findByIdForUpdate(c, request.getResultId());
+            TestResult original = results.findByIdForUpdate(connection, request.getResultId());
             Checks.require(
                 "APPROVED".equals(original.getStatus()),
                 "Kết quả không còn hiệu lực để xử lý đề nghị.");
             String decision = approve ? "APPROVED" : "REJECTED";
             Checks.require(
-                recalls.review(c, requestId, actor.getUserId(), decision, validNote, proof),
+                recalls.review(
+                    connection, requestId, actor.getUserId(), decision, validNote, proof),
                 "Đề nghị đã được xử lý.");
             if (approve) {
               // Giữ bản gốc; lần nhập tiếp theo tạo một TestResult mới cho cùng chỉ định.
-              results.markRecalled(c, original.getResultId());
-              orders.updateExecutionStatus(c, order.getOrderId(), "RESULT_RECALLED");
-              MedicalRecord record = records.findByIdRead(c, order.getRecordId());
+              results.markRecalled(connection, original.getResultId());
+              orders.updateExecutionStatus(connection, order.getOrderId(), "RESULT_RECALLED");
+              MedicalRecord record = records.findByIdRead(connection, order.getRecordId());
               AppointmentService.notify(
-                  c,
+                  connection,
                   record.getDoctorId(),
                   "Kết quả đã được thu hồi",
                   "Chỉ định #"
                       + order.getOrderId()
                       + " cần cập nhật kết quả. Vui lòng kiểm tra lại thông tin liên quan.");
               AppointmentService.notify(
-                  c,
+                  connection,
                   record.getPatientId(),
                   "Kết quả đang được cập nhật",
                   "Kết quả chỉ định #" + order.getOrderId() + " đã thu hồi để kiểm tra, cập nhật.");
               AuditDAO.record(
-                  c, actor.getUserId(), "RECALL_RESULT", "test_result", original.getResultId());
+                  connection,
+                  actor.getUserId(),
+                  "RECALL_RESULT",
+                  "test_result",
+                  original.getResultId());
             }
             AuditDAO.record(
-                c,
+                connection,
                 actor.getUserId(),
                 approve ? "APPROVE_RECALL" : "REJECT_RECALL",
                 "result_recall_request",
@@ -113,32 +121,33 @@ public class ResultRecallService {
   public File getApprovalFile(int requestId) {
     Actors.require(actor, "DEPARTMENT_HEAD");
     return Database.read(
-        c -> {
-          ResultRecallRequest request = recalls.findById(c, requestId);
+        connection -> {
+          ResultRecallRequest request = recalls.findById(connection, requestId);
           Checks.require(request != null, "Không tìm thấy phiếu.");
-          requireReviewPermission(c, request);
+          requireReviewPermission(connection, request);
           return new AttachmentStorage().resolve(request.getApprovalFileUrl());
         });
   }
 
-  private ClinicalOrder lockOrderForResult(Connection c, int resultId) throws SQLException {
-    Integer orderId = results.findOrderId(c, resultId);
+  private ClinicalOrder lockOrderForResult(Connection connection, int resultId)
+      throws SQLException {
+    Integer orderId = results.findOrderId(connection, resultId);
     Checks.require(orderId != null, "Không tìm thấy kết quả.");
-    Integer recordId = orders.findRecordId(c, orderId);
-    records.findById(c, recordId); // Thứ tự khóa thống nhất: bệnh án -> chỉ định.
-    return orders.findById(c, orderId);
+    Integer recordId = orders.findRecordId(connection, orderId);
+    records.findById(connection, recordId); // Thứ tự khóa thống nhất: bệnh án -> chỉ định.
+    return orders.findById(connection, orderId);
   }
 
-  private int requireHeadDepartment(Connection c) throws SQLException {
-    Integer department = recalls.headDepartment(c, actor.getUserId());
+  private int requireHeadDepartment(Connection connection) throws SQLException {
+    Integer department = recalls.headDepartment(connection, actor.getUserId());
     Checks.require(department != null, "Tài khoản trưởng khoa chưa được phân công chuyên khoa.");
     return department;
   }
 
-  private void requireReviewPermission(Connection c, ResultRecallRequest request)
+  private void requireReviewPermission(Connection connection, ResultRecallRequest request)
       throws SQLException {
     Checks.require(
-        request.getDepartmentId() == requireHeadDepartment(c),
+        request.getDepartmentId() == requireHeadDepartment(connection),
         "Chỉ được xử lý kết quả thuộc chuyên khoa phụ trách.");
   }
 
@@ -154,10 +163,10 @@ public class ResultRecallService {
   public File getOriginalResultFile(int requestId) {
     Actors.require(actor, "DEPARTMENT_HEAD");
     return Database.read(
-        c -> {
-          ResultRecallRequest request = recalls.findById(c, requestId);
+        connection -> {
+          ResultRecallRequest request = recalls.findById(connection, requestId);
           Checks.require(request != null, "Không tìm thấy phiếu.");
-          requireReviewPermission(c, request);
+          requireReviewPermission(connection, request);
           return new AttachmentStorage().resolve(request.getOriginalFileUrl());
         });
   }

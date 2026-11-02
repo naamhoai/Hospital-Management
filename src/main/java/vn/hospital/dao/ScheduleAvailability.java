@@ -4,7 +4,7 @@ import java.sql.*;
 import java.time.*;
 import java.util.*;
 
-/** Counts future free appointment times, rather than merely unused shift capacity. */
+/** Đếm giờ hẹn thực sự còn trống trong tương lai, không chỉ lấy sức chứa trừ số đã đặt. */
 public final class ScheduleAvailability {
   private ScheduleAvailability() {}
 

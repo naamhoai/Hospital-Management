@@ -5,7 +5,7 @@ import java.util.*;
 import vn.hospital.model.*;
 import vn.hospital.util.Database;
 
-/** Read-only aggregation of operational/medical and paid billing data (CD12). */
+/** Tổng hợp chỉ đọc lượt khám và hóa đơn đã trả tiền để lập báo cáo (CD12). */
 public class ReportDAO {
   private String period(String column, String group) {
     return switch (group) {
@@ -125,23 +125,5 @@ public class ReportDAO {
   public List<Map<String, Object>> filterServices() {
     return Jdbc.read(
         "SELECT service_id,name FROM service WHERE category<>'CONSULTATION' ORDER BY name");
-  }
-
-  /** Compatibility bridge for the original group integration test. */
-  public List<Map<String, Object>> queryRevenueMetrics(
-      java.time.LocalDate from, java.time.LocalDate to, String method) {
-    var f = new ReportFilter();
-    f.setFromDate(from);
-    f.setToDate(to);
-    f.setGroupBy("DAY");
-    f.setPaymentMethod(method);
-    return queryRevenueMetrics(f).getRows().stream()
-        .map(
-            row -> {
-              Map<String, Object> m = new LinkedHashMap<>();
-              m.put("total_revenue", row.getTotalRevenue());
-              return m;
-            })
-        .toList();
   }
 }

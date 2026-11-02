@@ -9,15 +9,18 @@ import vn.hospital.util.Actors;
 
 @WebServlet("/my-records")
 public class PatientRecordController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s)
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    new PatientRecordService(user(r))
-        .workspace(p(r, "id").isBlank() ? null : Actors.id(id(r, "id")))
-        .forEach(r::setAttribute);
-    view(r, s, "my-records");
+    new PatientRecordService(user(request))
+        .workspace(param(request, "id").isBlank() ? null : Actors.id(id(request, "id")))
+        .forEach(request::setAttribute);
+    view(request, response, "my-records");
   }
 
-  protected void doPost(HttpServletRequest r, HttpServletResponse s) throws IOException {
-    s.sendRedirect(new PaymentService().createLink(user(r), id(r, "invoiceId"), r.getRemoteAddr()));
+  protected void doPost(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
+    response.sendRedirect(
+        new PaymentService()
+            .createLink(user(request), id(request, "invoiceId"), request.getRemoteAddr()));
   }
 }

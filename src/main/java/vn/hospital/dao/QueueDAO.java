@@ -2,6 +2,8 @@ package vn.hospital.dao;
 
 import java.sql.*;
 import java.util.*;
+import vn.hospital.model.Queue;
+import vn.hospital.model.QueueContext;
 import vn.hospital.util.Database;
 
 public class QueueDAO {
@@ -70,12 +72,12 @@ public class QueueDAO {
         values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findActiveRooms(Object... values) {
+  public List<Map<String, Object>> findActiveRooms(Object... values) {
     return Jdbc.read(
         "SELECT * FROM rooms WHERE status='ACTIVE' AND room_type='CONSULTATION'", values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findQueueForActor(Object... values) {
+  public List<Map<String, Object>> findQueueForActor(Object... values) {
     return Jdbc.read(
         "SELECT q.*,u.full_name patient_name,d.full_name doctor_name FROM queue q JOIN users u ON"
             + " u.user_id=q.patient_id JOIN users d ON d.user_id=q.doctor_id WHERE"
@@ -85,22 +87,18 @@ public class QueueDAO {
         values);
   }
 
-  public vn.hospital.model.QueueContext findContext(Connection c, long queueId)
-      throws SQLException {
+  public QueueContext findContext(Connection c, long queueId) throws SQLException {
     return BeanMapper.map(
         Jdbc.one(
             c,
             "SELECT queue_id,appointment_id,patient_id,doctor_id,status,room_assigned FROM queue"
                 + " WHERE queue_id=?",
             queueId),
-        vn.hospital.model.QueueContext.class);
+        QueueContext.class);
   }
 
-  public vn.hospital.model.Queue findById(Integer id) {
+  public Queue findById(Integer id) {
     return Database.read(
-        c ->
-            BeanMapper.map(
-                Jdbc.one(c, "SELECT * FROM queue WHERE queue_id=?", id),
-                vn.hospital.model.Queue.class));
+        c -> BeanMapper.map(Jdbc.one(c, "SELECT * FROM queue WHERE queue_id=?", id), Queue.class));
   }
 }

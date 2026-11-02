@@ -35,9 +35,9 @@ class DesignContractTest {
   }
 
   @Test
-  void baselineKeepsEighteenSdsBusinessTables() throws Exception {
+  void schemaIncludesBusinessAndRequiredSupportTables() throws Exception {
     String schema = Files.readString(Path.of("database/01-schema.sql"));
-    assertEquals(18, schema.split("CREATE TABLE ").length - 1);
+    assertEquals(25, schema.split("CREATE TABLE ").length - 1);
     assertFalse(schema.contains("password_hash"));
     assertFalse(schema.contains("FOREIGN KEY(queue_id)"));
     assertTrue(schema.contains("diagnosis VARCHAR(255) NOT NULL"));
@@ -117,8 +117,7 @@ class DesignContractTest {
             new AnalyticsService(new AuthUser(8, "Patient", "PATIENT"))
                 .generateReport("revenue", f));
     assertThrows(
-        BusinessException.class,
-        () -> new AnalyticsService().generateReport("flow", "2026-01-01", "2026-01-02", ""));
+        BusinessException.class, () -> new AnalyticsService(null).generateReport("flow", f));
   }
 
   @Test

@@ -10,63 +10,75 @@ public class AppointmentService {
   private final ScheduleDAO schedules = new ScheduleDAO();
   private final AppointmentDAO appointments = new AppointmentDAO();
 
+  /** Khóa bệnh nhân và ca khám trong cùng transaction để không đặt vượt số chỗ. */
   public long createAppointment(long patient, long schedule, String symptoms) {
-    return Database.tx(c -> book(c, patient, schedule, symptoms, true));
+    return Database.tx(connection -> book(connection, patient, schedule, symptoms, true));
   }
 
-  public long book(Connection c, long patient, long schedule, String symptoms, boolean online)
+  /** Dùng chung cho đặt online và khách đến trực tiếp; giá khám được chụp tại lúc đặt. */
+  public long book(
+      Connection connection, long patient, long schedule, String symptoms, boolean online)
       throws SQLException {
-    var p = new PatientDAO().lockForBooking(c, patient);
-    Checks.require(p != null, "Không tìm thấy bệnh nhân.");
+    var patientDetails = new PatientDAO().lockForBooking(connection, patient);
+    Checks.require(patientDetails != null, "Không tìm thấy bệnh nhân.");
     if (online) {
       Checks.require(
-          p.get("booking_blocked_until") == null
-              || ((java.sql.Date) p.get("booking_blocked_until"))
+          patientDetails.get("booking_blocked_until") == null
+              || ((java.sql.Date) patientDetails.get("booking_blocked_until"))
                   .toLocalDate()
                   .isBefore(LocalDate.now()),
           "Tạm khóa đặt lịch trực tuyến 30 ngày do hủy nhiều lần.");
-      long count = Rows.number(new AppointmentDAO().countIncompleteRows(c, patient), "n");
+      long count = Rows.number(new AppointmentDAO().countIncompleteRows(connection, patient), "n");
       Checks.require(count < 2, "Bạn chỉ được có tối đa 2 lịch khám chưa hoàn tất.");
     }
-    var w = schedules.findById(c, schedule);
-    Checks.require(w != null && "AVAILABLE".equals(w.get("status")), "Ca khám không khả dụng.");
-    var slot = findFreeTime(c, w, 0);
-    var fee = new MedicalServiceDAO().findConsultationFeeRow(c);
+    var scheduleDetails = schedules.findById(connection, schedule);
+    Checks.require(
+        scheduleDetails != null && "AVAILABLE".equals(scheduleDetails.get("status")),
+        "Ca khám không khả dụng.");
+    var slot = findFreeTime(connection, scheduleDetails, 0);
+    var fee = new MedicalServiceDAO().findConsultationFeeRow(connection);
     Checks.require(fee != null, "Chưa cấu hình phí khám.");
     long id =
         new AppointmentDAO()
             .insertAppointmentRow(
-                c,
+                connection,
                 "AP-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase(),
                 patient,
-                w.get("doctor_id"),
+                scheduleDetails.get("doctor_id"),
                 schedule,
-                w.get("work_date"),
+                scheduleDetails.get("work_date"),
                 slot,
                 Checks.text(symptoms, 255, "Triệu chứng"),
                 fee.get("unit_price"));
-    new ScheduleDAO().incrementBooked(c, schedule);
+    new ScheduleDAO().incrementBooked(connection, schedule);
     notify(
-        c,
+        connection,
         patient,
         "Xác nhận đặt lịch",
-        "Mã lịch #" + id + ", ngày " + w.get("work_date") + " lúc " + slot);
-    AuditDAO.record(c, patient, "BOOK", "appointment", id);
+        "Mã lịch #" + id + ", ngày " + scheduleDetails.get("work_date") + " lúc " + slot);
+    AuditDAO.record(connection, patient, "BOOK", "appointment", id);
     return id;
   }
 
-  private LocalTime findFreeTime(Connection c, Map<String, Object> w, long exclude)
+  /** Chọn giờ còn trống trong ca, bỏ các giờ đã qua và các giờ đã có lịch. */
+  private LocalTime findFreeTime(
+      Connection connection, Map<String, Object> scheduleDetails, long exclude)
       throws SQLException {
-    Checks.require(Rows.number(w, "booked_count") < Rows.number(w, "max_slots"), "Ca khám đã đầy.");
-    var day = ((java.sql.Date) w.get("work_date")).toLocalDate();
-    var start = ((Time) w.get("start_time")).toLocalTime();
-    var end = ((Time) w.get("end_time")).toLocalTime();
-    long minutes = Duration.between(start, end).toMinutes() / Rows.number(w, "max_slots");
+    Checks.require(
+        Rows.number(scheduleDetails, "booked_count") < Rows.number(scheduleDetails, "max_slots"),
+        "Ca khám đã đầy.");
+    var day = ((java.sql.Date) scheduleDetails.get("work_date")).toLocalDate();
+    var start = ((Time) scheduleDetails.get("start_time")).toLocalTime();
+    var end = ((Time) scheduleDetails.get("end_time")).toLocalTime();
+    long minutes =
+        Duration.between(start, end).toMinutes() / Rows.number(scheduleDetails, "max_slots");
     Checks.require(minutes > 0, "Sức chứa ca khám quá lớn.");
-    var booked = new AppointmentDAO().findOccupiedTimes(c, w.get("schedule_id"), exclude);
+    var booked =
+        new AppointmentDAO()
+            .findOccupiedTimes(connection, scheduleDetails.get("schedule_id"), exclude);
     Set<LocalTime> taken = new HashSet<>();
     for (var b : booked) taken.add(((Time) b.get("appointment_time")).toLocalTime());
-    for (int i = 0; i < Rows.number(w, "max_slots"); i++) {
+    for (int i = 0; i < Rows.number(scheduleDetails, "max_slots"); i++) {
       LocalTime time = start.plusMinutes(i * minutes);
       if (!taken.contains(time) && LocalDateTime.of(day, time).isAfter(LocalDateTime.now()))
         return time;
@@ -74,68 +86,88 @@ public class AppointmentService {
     throw new BusinessException("Không còn giờ khám phù hợp trong ca này.");
   }
 
+  /** Đổi ca và cập nhật số chỗ hai ca cùng lúc; lỗi sẽ hoàn tác toàn bộ. */
   public void rescheduleAppointment(long patient, long appointment, long target) {
     Database.tx(
-        c -> {
-          new PatientDAO().lockPatient(c, patient);
-          var a = appointments.findById(c, appointment);
-          own(a, patient);
-          Checks.require(Rows.number(a, "schedule_id") != target, "Hãy chọn ca khám khác.");
-          Checks.require(Rows.number(a, "reschedule_count") < 2, "Chỉ được đổi lịch tối đa 2 lần.");
-          var old = schedules.findById(c, Rows.number(a, "schedule_id"));
+        connection -> {
+          new PatientDAO().lockPatient(connection, patient);
+          var appointmentDetails = appointments.findById(connection, appointment);
+          own(appointmentDetails, patient);
+          Checks.require(
+              Rows.number(appointmentDetails, "schedule_id") != target, "Hãy chọn ca khám khác.");
+          Checks.require(
+              Rows.number(appointmentDetails, "reschedule_count") < 2,
+              "Chỉ được đổi lịch tối đa 2 lần.");
+          var old = schedules.findById(connection, Rows.number(appointmentDetails, "schedule_id"));
           Checks.require(
               LocalDateTime.of(
                       ((java.sql.Date) old.get("work_date")).toLocalDate(),
                       ((Time) old.get("start_time")).toLocalTime())
                   .isAfter(LocalDateTime.now().plusHours(12)),
               "Phải đổi lịch trước giờ bắt đầu ca ít nhất 12 tiếng.");
-          var w = schedules.findById(c, target);
+          var scheduleDetails = schedules.findById(connection, target);
           Checks.require(
-              w != null && "AVAILABLE".equals(w.get("status")), "Ca khám không khả dụng.");
-          var time = findFreeTime(c, w, appointment);
+              scheduleDetails != null && "AVAILABLE".equals(scheduleDetails.get("status")),
+              "Ca khám không khả dụng.");
+          var time = findFreeTime(connection, scheduleDetails, appointment);
           new AppointmentDAO()
-              .rescheduleRow(c, target, w.get("doctor_id"), w.get("work_date"), time, appointment);
-          new ScheduleDAO().decrementBooked(c, a.get("schedule_id"));
-          new ScheduleDAO().incrementBooked(c, target);
+              .rescheduleRow(
+                  connection,
+                  target,
+                  scheduleDetails.get("doctor_id"),
+                  scheduleDetails.get("work_date"),
+                  time,
+                  appointment);
+          new ScheduleDAO().decrementBooked(connection, appointmentDetails.get("schedule_id"));
+          new ScheduleDAO().incrementBooked(connection, target);
           notify(
-              c,
+              connection,
               patient,
               "Đổi lịch khám",
-              "Lịch #" + appointment + " chuyển sang " + w.get("work_date") + " " + time);
-          AuditDAO.record(c, patient, "RESCHEDULE", "appointment", appointment);
+              "Lịch #"
+                  + appointment
+                  + " chuyển sang "
+                  + scheduleDetails.get("work_date")
+                  + " "
+                  + time);
+          AuditDAO.record(connection, patient, "RESCHEDULE", "appointment", appointment);
           return null;
         });
   }
 
+  /** Hủy lịch thuộc bệnh nhân, trả lại số chỗ và kiểm tra giới hạn hủy trong tháng. */
   public void cancelAppointment(long patient, long appointment) {
     Database.tx(
-        c -> {
-          new PatientDAO().lockPatient(c, patient);
-          var a = appointments.findById(c, appointment);
-          own(a, patient);
-          new AppointmentDAO().cancelRow(c, appointment);
-          new ScheduleDAO().decrementBooked(c, a.get("schedule_id"));
+        connection -> {
+          new PatientDAO().lockPatient(connection, patient);
+          var appointmentDetails = appointments.findById(connection, appointment);
+          own(appointmentDetails, patient);
+          new AppointmentDAO().cancelRow(connection, appointment);
+          new ScheduleDAO().decrementBooked(connection, appointmentDetails.get("schedule_id"));
           long cancellations =
-              Rows.number(new AppointmentDAO().countMonthlyCancellationsRows(c, patient), "n");
-          if (cancellations > 3) new PatientDAO().blockBooking(c, patient);
-          notify(c, patient, "Hủy lịch khám", "Đã hủy lịch #" + appointment);
-          AuditDAO.record(c, patient, "CANCEL", "appointment", appointment);
+              Rows.number(
+                  new AppointmentDAO().countMonthlyCancellationsRows(connection, patient), "n");
+          if (cancellations > 3) new PatientDAO().blockBooking(connection, patient);
+          notify(connection, patient, "Hủy lịch khám", "Đã hủy lịch #" + appointment);
+          AuditDAO.record(connection, patient, "CANCEL", "appointment", appointment);
           return null;
         });
   }
 
-  private void own(Map<String, Object> a, long patient) {
+  private void own(Map<String, Object> appointmentDetails, long patient) {
     Checks.require(
-        a != null && Rows.number(a, "patient_id") == patient && "BOOKED".equals(a.get("status")),
+        appointmentDetails != null
+            && Rows.number(appointmentDetails, "patient_id") == patient
+            && "BOOKED".equals(appointmentDetails.get("status")),
         "Không thể thay đổi lịch khám này.");
   }
 
-  public static void notify(Connection c, long patient, String subject, String body)
+  public static void notify(Connection connection, long patient, String subject, String body)
       throws SQLException {
-    new NotificationDAO().enqueue(c, subject, body, patient);
+    new NotificationDAO().enqueue(connection, subject, body, patient);
   }
 
-  public java.util.List<java.util.Map<String, Object>> getAppointments(long patient) {
+  public List<Map<String, Object>> getAppointments(long patient) {
     return new AppointmentDAO().findByPatient(patient);
   }
 }

@@ -1,73 +1,83 @@
 package vn.hospital.controller;
 
-import jakarta.servlet.*;
-import jakarta.servlet.http.*;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import vn.hospital.model.AuthUser;
-import vn.hospital.util.*;
+import vn.hospital.model.UploadData;
+import vn.hospital.util.BusinessException;
+import vn.hospital.util.Checks;
 
+/** Các thao tác HTTP dùng chung; nghiệp vụ và SQL nằm ở Service/DAO. */
 public abstract class BaseController extends HttpServlet {
-  protected AuthUser user(HttpServletRequest r) {
-    return (AuthUser) r.getSession().getAttribute("user");
+  protected AuthUser user(HttpServletRequest request) {
+    return (AuthUser) request.getSession().getAttribute("user");
   }
 
-  protected String p(HttpServletRequest r, String key) {
-    String s = r.getParameter(key);
-    return s == null ? "" : s.trim();
+  protected String param(HttpServletRequest request, String name) {
+    String value = request.getParameter(name);
+    return value == null ? "" : value.trim();
   }
 
-  protected long id(HttpServletRequest r, String key) {
-    return Checks.id(p(r, key));
+  protected long id(HttpServletRequest request, String name) {
+    return Checks.id(param(request, name));
   }
 
-  protected void view(HttpServletRequest r, HttpServletResponse s, String name)
+  protected void view(HttpServletRequest request, HttpServletResponse response, String name)
       throws ServletException, IOException {
-    r.getRequestDispatcher("/WEB-INF/views/" + name + ".jsp").forward(r, s);
+    request.getRequestDispatcher("/WEB-INF/views/" + name + ".jsp").forward(request, response);
   }
 
-  protected void redirect(HttpServletRequest r, HttpServletResponse s, String path, String message)
+  protected void redirect(
+      HttpServletRequest request, HttpServletResponse response, String path, String message)
       throws IOException {
-    r.getSession().setAttribute("flash", message);
-    s.sendRedirect(r.getContextPath() + path);
+    request.getSession().setAttribute("flash", message);
+    response.sendRedirect(request.getContextPath() + path);
   }
 
-  protected void download(HttpServletResponse s, java.io.File file, String type, String name)
+  /** Chỉ xóa file xuất tạm sau khi gửi; không dùng hàm này cho tệp kết quả lưu lâu dài. */
+  protected void download(HttpServletResponse response, File file, String type, String name)
       throws IOException {
     try {
-      s.setContentType(type);
-      s.setHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
-      s.setContentLengthLong(file.length());
-      java.nio.file.Files.copy(file.toPath(), s.getOutputStream());
+      response.setContentType(type);
+      response.setHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
+      response.setContentLengthLong(file.length());
+      Files.copy(file.toPath(), response.getOutputStream());
     } finally {
-      java.nio.file.Files.deleteIfExists(file.toPath());
+      Files.deleteIfExists(file.toPath());
     }
   }
 
   @Override
-  protected void service(HttpServletRequest r, HttpServletResponse s)
+  protected void service(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     try {
-      super.service(r, s);
-    } catch (BusinessException e) {
-      s.setStatus(422);
-      r.setAttribute("error", e.getMessage());
-      view(r, s, "error");
-    } catch (RuntimeException e) {
-      getServletContext().log("Request failed: " + r.getServletPath(), e);
-      s.setStatus(500);
-      r.setAttribute(
+      super.service(request, response);
+    } catch (BusinessException error) {
+      response.setStatus(422);
+      request.setAttribute("error", error.getMessage());
+      view(request, response, "error");
+    } catch (RuntimeException error) {
+      getServletContext().log("Request failed: " + request.getServletPath(), error);
+      response.setStatus(500);
+      request.setAttribute(
           "error", "Không xử lý được yêu cầu. Kiểm tra cấu hình database hoặc xem log Tomcat.");
-      view(r, s, "error");
+      view(request, response, "error");
     }
   }
 
-  protected vn.hospital.model.UploadData upload(HttpServletRequest request, String field)
+  protected UploadData upload(HttpServletRequest request, String field)
       throws ServletException, IOException {
-    if (request.getContentType() == null || !request.getContentType().startsWith("multipart/"))
-      return null;
+    String contentType = request.getContentType();
+    if (contentType == null || !contentType.startsWith("multipart/")) return null;
     Part file = request.getPart(field);
     if (file == null || file.getSize() == 0) return null;
-    return new vn.hospital.model.UploadData(
+    return new UploadData(
         file.getSubmittedFileName(), file.getContentType(), file.getInputStream().readAllBytes());
   }
 }

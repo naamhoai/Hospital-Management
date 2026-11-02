@@ -9,27 +9,30 @@ import vn.hospital.util.*;
 
 @WebServlet("/clinical-orders")
 public class ClinicalOrderController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s) throws IOException {
-    int order = Actors.id(id(r, "id"));
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
+    int order = Actors.id(id(request, "id"));
     download(
-        s,
-        new ClinicalService(user(r)).printClinicalOrder(order),
+        response,
+        new ClinicalService(user(request)).printClinicalOrder(order),
         "application/pdf",
         "clinical-order-" + order + ".pdf");
   }
 
-  protected void doPost(HttpServletRequest r, HttpServletResponse s) throws IOException {
-    var service = new ClinicalService(user(r));
-    if (p(r, "action").equals("cancel")) service.cancelOrder(Actors.id(id(r, "orderId")));
+  protected void doPost(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
+    var service = new ClinicalService(user(request));
+    if (param(request, "action").equals("cancel"))
+      service.cancelOrder(Actors.id(id(request, "orderId")));
     else {
-      String[] ids = r.getParameterValues("serviceId");
+      String[] ids = request.getParameterValues("serviceId");
       Checks.require(ids != null, "Chọn ít nhất một dịch vụ.");
       service.createClinicalOrders(
           new ClinicalOrderRequest(
-              Actors.id(id(r, "recordId")),
+              Actors.id(id(request, "recordId")),
               java.util.Arrays.stream(ids).map(v -> Actors.id(Checks.id(v))).toList(),
-              p(r, "instructions")));
+              param(request, "instructions")));
     }
-    redirect(r, s, "/emr?queueId=" + id(r, "queueId"), "Đã cập nhật chỉ định.");
+    redirect(request, response, "/emr?queueId=" + id(request, "queueId"), "Đã cập nhật chỉ định.");
   }
 }

@@ -53,6 +53,6 @@ assert 'Kết quả thay thế đã kiểm tra' in detail and 'Lịch sử đề
 _,payload,_=doctor.request('/clinical-updates?afterId='+str(cursor))
 assert any('kết quả mới' in item['message'] for item in json.loads(payload)['updates'])
 patient.request('/clinical-updates',status=403)
-text='\n'.join(smoke.checks)+f'\n{len(smoke.checks)} Nam recall/notification HTTP checks passed.\n'
+text='\n'.join(smoke.checks)+f'\n{len(smoke.checks)} Result recall/notification HTTP checks passed.\n'
 print(text)
-Path('target/http-nam-workflows-results.txt').write_text(text,encoding='utf-8')
+Path('target/http-result-recalls-results.txt').write_text(text,encoding='utf-8')

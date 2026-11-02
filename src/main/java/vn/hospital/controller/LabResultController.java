@@ -11,29 +11,30 @@ import vn.hospital.util.*;
 @WebServlet("/lab")
 @MultipartConfig(maxFileSize = 5242880, maxRequestSize = 5500000, fileSizeThreshold = 0)
 public class LabResultController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s)
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    new ClinicalService(user(r))
+    new ClinicalService(user(request))
         .labWorkspace(
-            p(r, "q"),
-            p(r, "status"),
-            p(r, "orderId").isBlank() ? null : Actors.id(id(r, "orderId")))
-        .forEach(r::setAttribute);
-    view(r, s, "lab");
+            param(request, "q"),
+            param(request, "status"),
+            param(request, "orderId").isBlank() ? null : Actors.id(id(request, "orderId")))
+        .forEach(request::setAttribute);
+    view(request, response, "lab");
   }
 
-  protected void doPost(HttpServletRequest r, HttpServletResponse s)
+  protected void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     var result = new TestResult();
-    result.setResultData(p(r, "resultData"));
-    result.setConclusion(p(r, "conclusion"));
-    result.setFileUrl(p(r, "fileUrl"));
-    UploadData upload = upload(r, "attachment");
-    new ClinicalService(user(r)).recordTestResult(Actors.id(id(r, "orderId")), result, upload);
+    result.setResultData(param(request, "resultData"));
+    result.setConclusion(param(request, "conclusion"));
+    result.setFileUrl(param(request, "fileUrl"));
+    UploadData upload = upload(request, "attachment");
+    new ClinicalService(user(request))
+        .recordTestResult(Actors.id(id(request, "orderId")), result, upload);
     redirect(
-        r,
-        s,
-        "/lab?orderId=" + id(r, "orderId"),
+        request,
+        response,
+        "/lab?orderId=" + id(request, "orderId"),
         "Đã duyệt kết quả. Kết quả được khóa để giữ toàn vẹn dữ liệu.");
   }
 }

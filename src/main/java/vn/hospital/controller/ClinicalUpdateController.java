@@ -12,13 +12,13 @@ public class ClinicalUpdateController extends BaseController {
       throws IOException {
     var service = new ClinicalUpdateService(user(request));
     response.setContentType("application/json");
-    if (p(request, "afterId").isBlank()) {
+    if (param(request, "afterId").isBlank()) {
       response.getWriter().write("{\"cursor\":" + service.latestId() + ",\"updates\":[]}");
       return;
     }
     long cursor;
     try {
-      cursor = Long.parseLong(p(request, "afterId"));
+      cursor = Long.parseLong(param(request, "afterId"));
     } catch (NumberFormatException error) {
       throw new BusinessException("Mốc thông báo không hợp lệ.");
     }

@@ -1,7 +1,10 @@
 package vn.hospital.model;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public class PatientFlowReport extends ReportData {
   private Integer patientCount = 0;

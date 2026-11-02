@@ -1,9 +1,8 @@
 package vn.hospital.model;
 
-import java.time.*;
-import java.util.*;
+import java.time.LocalDate;
 
-/** Java Bean mapped to the SDS domain or request/data model. */
+/** Dữ liệu nghiệp vụ hoặc dữ liệu trao đổi giữa các tầng của ứng dụng. */
 public class ReportFilter {
   private LocalDate fromDate;
   private LocalDate toDate;

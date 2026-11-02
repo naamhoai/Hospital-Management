@@ -15,7 +15,7 @@ import vn.hospital.service.*;
 import vn.hospital.util.*;
 
 @EnabledIfEnvironmentVariable(named = "HOSPITAL_INTEGRATION", matches = "1")
-class NamRevisionTest {
+class ClinicalSafetyTest {
   private final AuthUser doctor = new AuthUser(6, "Doctor", "DOCTOR");
   private final AuthUser lab = new AuthUser(5, "Lab", "LAB_TECHNICIAN");
   private final AuthUser cashier = new AuthUser(3, "Cashier", "CASHIER");
@@ -32,7 +32,7 @@ class NamRevisionTest {
               c.getCatalog(),
               "Only run against the disposable hospital_test database.");
           var account = Jdbc.one(c, "SELECT user_id FROM users WHERE email='head@hospital.test'");
-          assertNotNull(account, "Run 05-nam-workflows.sql and 06-demo-department-head.sql first.");
+          assertNotNull(account, "Nạp 01-schema.sql, 02-seed.sql và 04-demo-data.sql trước.");
           head = new AuthUser(Jdbc.number(account, "user_id"), "Head", "DEPARTMENT_HEAD");
           long next =
               Jdbc.number(

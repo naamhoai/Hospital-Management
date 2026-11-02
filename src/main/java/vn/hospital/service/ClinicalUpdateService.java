@@ -14,12 +14,14 @@ public class ClinicalUpdateService {
 
   public long latestId() {
     Actors.require(actor, "DOCTOR");
-    return Database.read(c -> new ClinicalUpdateDAO().latestId(c, actor.getUserId()));
+    return Database.read(
+        connection -> new ClinicalUpdateDAO().latestId(connection, actor.getUserId()));
   }
 
   public List<ClinicalUpdate> findAfter(long after) {
     Actors.require(actor, "DOCTOR");
     Checks.require(after >= 0, "Mốc thông báo không hợp lệ.");
-    return Database.read(c -> new ClinicalUpdateDAO().findAfter(c, actor.getUserId(), after));
+    return Database.read(
+        connection -> new ClinicalUpdateDAO().findAfter(connection, actor.getUserId(), after));
   }
 }

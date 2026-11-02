@@ -2,6 +2,7 @@ package vn.hospital.dao;
 
 import java.sql.*;
 import java.util.*;
+import vn.hospital.model.MedicalService;
 import vn.hospital.util.Database;
 
 public class MedicalServiceDAO {
@@ -29,35 +30,33 @@ public class MedicalServiceDAO {
         values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findDepartments(Object... values) {
+  public List<Map<String, Object>> findDepartments(Object... values) {
     return Jdbc.read("SELECT * FROM departments", values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findCatalogServices(Object... values) {
+  public List<Map<String, Object>> findCatalogServices(Object... values) {
     return Jdbc.read(
         "SELECT s.*,d.name department FROM service s JOIN departments d USING(department_id) ORDER"
             + " BY service_id",
         values);
   }
 
-  public vn.hospital.model.MedicalService findById(Integer id) {
+  public MedicalService findById(Integer id) {
     return Database.tx(c -> findById(c, id));
   }
 
-  public vn.hospital.model.MedicalService findById(Connection c, long id) throws SQLException {
+  public MedicalService findById(Connection c, long id) throws SQLException {
     return BeanMapper.map(
-        Jdbc.one(c, "SELECT * FROM service WHERE service_id=?", id),
-        vn.hospital.model.MedicalService.class);
+        Jdbc.one(c, "SELECT * FROM service WHERE service_id=?", id), MedicalService.class);
   }
 
-  public java.util.List<vn.hospital.model.MedicalService> findAllActive() {
+  public List<MedicalService> findAllActive() {
     return Database.tx(c -> findAllActive(c));
   }
 
-  public java.util.List<vn.hospital.model.MedicalService> findAllActive(Connection c)
-      throws SQLException {
+  public List<MedicalService> findAllActive(Connection c) throws SQLException {
     return BeanMapper.list(
         Jdbc.list(c, "SELECT * FROM service WHERE status='ACTIVE' ORDER BY category,name"),
-        vn.hospital.model.MedicalService.class);
+        MedicalService.class);
   }
 }

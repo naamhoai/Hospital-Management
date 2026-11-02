@@ -10,10 +10,6 @@ import vn.hospital.util.*;
 public class AnalyticsService {
   private final AuthUser actor;
 
-  public AnalyticsService() {
-    this(null);
-  }
-
   public AnalyticsService(AuthUser actor) {
     this.actor = actor;
   }
@@ -114,20 +110,5 @@ public class AnalyticsService {
     Actors.require(actor, "MANAGER", "ADMIN");
     var dao = new ReportDAO();
     return Map.of("departments", dao.filterDepartments(), "services", dao.filterServices());
-  }
-
-  public List<Map<String, Object>> generateReport(
-      String type, String from, String to, String method) {
-    Actors.require(actor, "MANAGER", "ADMIN");
-    var f = new ReportFilter();
-    f.setFromDate(Checks.date(from));
-    f.setToDate(Checks.date(to));
-    f.setPaymentMethod(method);
-    f.setGroupBy("DAY");
-    validateFilter(f);
-    if (type.equals("revenue"))
-      return new ReportDAO().queryRevenueMetrics(f.getFromDate(), f.getToDate(), method);
-    if (type.equals("flow")) return new ReportDAO().queryPatientFlowMetrics(f).tableRows();
-    throw new BusinessException("Loại báo cáo không hợp lệ.");
   }
 }

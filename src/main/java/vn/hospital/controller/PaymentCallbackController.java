@@ -10,25 +10,26 @@ import vn.hospital.util.BusinessException;
 
 @WebServlet(urlPatterns = {"/payment/return", "/payment/ipn"})
 public class PaymentCallbackController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s)
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     Map<String, String> params = new HashMap<>();
-    r.getParameterMap()
+    request
+        .getParameterMap()
         .forEach(
             (k, v) -> {
               if (v.length == 1) params.put(k, v[0]);
             });
-    if (r.getServletPath().endsWith("/ipn")) {
-      s.setContentType("application/json");
+    if (request.getServletPath().endsWith("/ipn")) {
+      response.setContentType("application/json");
       try {
         new PaymentService().handleCallback(params);
-        s.getWriter().write("{\"RspCode\":\"00\",\"Message\":\"Confirm Success\"}");
+        response.getWriter().write("{\"RspCode\":\"00\",\"Message\":\"Confirm Success\"}");
       } catch (BusinessException e) {
-        s.getWriter().write("{\"RspCode\":\"99\",\"Message\":\"Validation failed\"}");
+        response.getWriter().write("{\"RspCode\":\"99\",\"Message\":\"Validation failed\"}");
       }
       return;
     }
-    r.setAttribute("message", new PaymentService().handleCallback(params));
-    view(r, s, "payment-result");
+    request.setAttribute("message", new PaymentService().handleCallback(params));
+    view(request, response, "payment-result");
   }
 }

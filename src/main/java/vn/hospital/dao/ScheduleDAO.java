@@ -2,6 +2,7 @@ package vn.hospital.dao;
 
 import java.sql.*;
 import java.util.*;
+import vn.hospital.model.WorkSchedule;
 import vn.hospital.util.Database;
 
 public class ScheduleDAO {
@@ -70,14 +71,14 @@ public class ScheduleDAO {
         values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findActiveDoctors(Object... values) {
+  public List<Map<String, Object>> findActiveDoctors(Object... values) {
     return Jdbc.read(
         "SELECT d.doctor_id,u.full_name FROM doctors d JOIN users u ON u.user_id=d.doctor_id WHERE"
             + " (?='ADMIN' OR d.doctor_id=?)",
         values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findDoctorSchedules(Object... values) {
+  public List<Map<String, Object>> findDoctorSchedules(Object... values) {
     return Jdbc.read(
         "SELECT w.*,u.full_name doctor_name FROM work_schedule w JOIN users u ON"
             + " u.user_id=w.doctor_id WHERE (?='ADMIN' OR w.doctor_id=?) ORDER BY work_date"
@@ -85,11 +86,11 @@ public class ScheduleDAO {
         values);
   }
 
-  public vn.hospital.model.WorkSchedule findById(Integer id) {
+  public WorkSchedule findById(Integer id) {
     return Database.read(
         c ->
             BeanMapper.map(
                 Jdbc.one(c, "SELECT * FROM work_schedule WHERE schedule_id=?", id),
-                vn.hospital.model.WorkSchedule.class));
+                WorkSchedule.class));
   }
 }

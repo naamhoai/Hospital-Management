@@ -3,7 +3,7 @@ package vn.hospital.dev;
 import java.io.File;
 import org.apache.catalina.startup.Tomcat;
 
-/** Used only by the Maven dev profile; production deploys the WAR to Tomcat. */
+/** Máy chủ chạy thử bằng Maven; triển khai chính thức dùng file WAR trên Tomcat. */
 public class DevServer {
   public static void main(String[] args) throws Exception {
     System.setProperty("user.timezone", "Asia/Ho_Chi_Minh");

@@ -1,9 +1,9 @@
 package vn.hospital.model;
 
-import java.time.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-/** Java Bean mapped to the SDS domain or request/data model. */
+/** Dữ liệu nghiệp vụ hoặc dữ liệu trao đổi giữa các tầng của ứng dụng. */
 public class ClinicalOrderRequest {
   private Integer recordId;
   private List<Integer> serviceIds = new ArrayList<>();

@@ -20,14 +20,14 @@ Bản này là ứng dụng học phần chạy được theo các luồng chín
 ## Quyết định triển khai và điểm báo cáo cần nhóm thống nhất
 
 - MVC Layered: Filter → Servlet → Service → DAO → MySQL, Servlet → JSP. SQL đã tách khỏi Controller/Service/listener. `Database` thuộc `util`, quản lý connection/transaction; DAO map dữ liệu thành Java Bean.
-- Có đủ 17 entity Java Bean của 3.13 và Room của ERD. Projection danh sách JOIN dùng Map; `DiagnosisRequest`, `PrescriptionRequest`, `ClinicalOrderRequest`, `ReportFilter` là Java Bean. `AuthUser` là session principal, `PrescriptionItem` chỉ là adapter tương thích test cũ.
+- Giữ các Java Bean được dùng bởi nghiệp vụ và Room của ERD; đã bỏ Role/RoleDAO không có caller, còn bảng roles vẫn dùng cho đăng nhập/phân quyền. Projection danh sách JOIN dùng Map; `DiagnosisRequest`, `PrescriptionRequest`, `ClinicalOrderRequest`, `ReportFilter` là Java Bean. `AuthUser` là session principal, Đã bỏ DTO và API tương thích test cũ; test gọi cùng request model với Controller.
 - CD10 đặt `QueueContextPort.getContext` tại Service; SQ16 cũ đặt `verifyQueueContext` tại Controller. Code chọn ranh giới CD10 để validation dùng lại được; không sửa ngầm báo cáo. SQ16 cũng chưa thể hiện tạo bệnh án lần đầu: QueueService tạo draft OPEN khi gọi bệnh nhân.
 - `medical_record` không thêm queue_id. EMR nhận queueId rồi JOIN qua appointment_id. Draft có diagnosis chuỗi rỗng để thỏa NN; chỉ định/kê đơn/kết thúc yêu cầu chẩn đoán đã lưu thực sự.
 - Schema nền có 18 bảng nghiệp vụ, 5 bảng kỹ thuật cũ và 2 bảng mới cho phiếu thu hồi/tổng hợp ngày: tổng 25. File migration cho bản cũ giữ dữ liệu và các cột BIGINT cũ; schema mới dùng INT theo SDS. Chi tiết trong DESIGN_TRACEABILITY.md.
 - MySQL theo yêu cầu đã chốt với người dùng; báo cáo đang ghi kiểu SQL Server (NVARCHAR(MAX)). Chuyển sang VARCHAR/TEXT với utf8mb4, giữ domain/quan hệ. SRS bảng công nghệ ghi SQL Server và một số CD/SQ nhắc Redis/JWT, trong khi mô tả architecture là Servlet/JSP + session. Bản này sử dụng HttpSession; không tuyên bố đã dùng Redis/JWT.
 - Bệnh án đóng sau khi chỉ định hoàn tất hoặc hủy. Chi phí chưa thu được tự lập/cộng vào hóa đơn cuối lượt; tổng doanh thu chỉ gồm hóa đơn PAID. Không tự đánh dấu thanh toán khi đóng bệnh án.
 - Thu hồi kết quả của lượt đã đóng không tự mở khóa chẩn đoán hoặc đơn thuốc cũ. Bác sĩ được cảnh báo để đánh giá xử lý tiếp theo. Quan hệ chỉ định–kết quả là tối đa một bản đang có hiệu lực, có thể nhiều bản lịch sử; cần thể hiện bổ sung trên class/ERD.
-- Comment và hướng dẫn từng hàm nghiệp vụ, 5 sequence theo code nằm trong NAM_CODE_GUIDE.md. Báo cáo cloud và file Visual Paradigm chưa được sửa trong lần cập nhật code này.
+- Comment và hướng dẫn từng hàm nghiệp vụ, 5 sequence theo code nằm trong CLINICAL_REPORTING_GUIDE.md. Báo cáo cloud và file Visual Paradigm chưa được sửa trong lần cập nhật code này.
 - UI hiện hỗ trợ bệnh nhân xem hồ sơ/đơn/kết quả/hóa đơn. Chức năng của các thành viên khác vẫn cần hoàn thiện những mục SRS ghi ở các hàng phía trên; bản refactor này không đồng nghĩa toàn bộ SRS đã nghiệm thu.
 
 ## Triển khai và tích hợp

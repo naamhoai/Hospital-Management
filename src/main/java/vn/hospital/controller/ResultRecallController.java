@@ -13,12 +13,12 @@ public class ResultRecallController extends BaseController {
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     var service = new ResultRecallService(user(request));
-    if (!p(request, "originalRequestId").isBlank()) {
+    if (!param(request, "originalRequestId").isBlank()) {
       var file = service.getOriginalResultFile(Actors.id(id(request, "originalRequestId")));
       sendStoredFile(response, file, "original-result" + extension(file));
       return;
     }
-    if (!p(request, "fileRequestId").isBlank()) {
+    if (!param(request, "fileRequestId").isBlank()) {
       sendStoredFile(
           response,
           service.getApprovalFile(Actors.id(id(request, "fileRequestId"))),
@@ -32,9 +32,9 @@ public class ResultRecallController extends BaseController {
   protected void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     var service = new ResultRecallService(user(request));
-    String action = p(request, "action");
+    String action = param(request, "action");
     if ("request".equals(action)) {
-      service.requestRecall(Actors.id(id(request, "resultId")), p(request, "reason"));
+      service.requestRecall(Actors.id(id(request, "resultId")), param(request, "reason"));
       String path = user(request).is("DOCTOR") ? "/emr" : "/lab?orderId=" + id(request, "orderId");
       redirect(request, response, path, "Đã gửi đề nghị thu hồi kết quả cho trưởng khoa.");
       return;
@@ -43,7 +43,7 @@ public class ResultRecallController extends BaseController {
     service.reviewRequest(
         Actors.id(id(request, "requestId")),
         "approve".equals(action),
-        p(request, "reviewNote"),
+        param(request, "reviewNote"),
         upload(request, "signedReport"));
     redirect(
         request,

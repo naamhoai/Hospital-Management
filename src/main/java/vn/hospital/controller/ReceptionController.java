@@ -5,28 +5,35 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import vn.hospital.service.*;
+import vn.hospital.util.BusinessException;
 
 @WebServlet("/reception")
 public class ReceptionController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s)
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    String q = "%" + p(r, "keyword") + "%";
-    r.setAttribute("appointments", new ReceptionService().findAppointments(q, q, q));
-    r.setAttribute("patients", new ReceptionService().findPatients());
-    r.setAttribute("schedules", new ScheduleService().getAvailableSchedules());
-    view(r, s, "reception");
+    String q = "%" + param(request, "keyword") + "%";
+    request.setAttribute("appointments", new ReceptionService().findAppointments(q, q, q));
+    request.setAttribute("patients", new ReceptionService().findPatients());
+    request.setAttribute("schedules", new ScheduleService().getAvailableSchedules());
+    view(request, response, "reception");
   }
 
-  protected void doPost(HttpServletRequest r, HttpServletResponse s) throws IOException {
+  protected void doPost(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
     var service = new ReceptionService();
     long queue;
-    if (p(r, "action").equals("walkin"))
+    if (param(request, "action").equals("walkin"))
       queue =
           service.registerWalkIn(
-              user(r), id(r, "patientId"), id(r, "scheduleId"), p(r, "symptoms"), p(r, "priority"));
-    else if (p(r, "action").equals("checkin"))
-      queue = service.checkIn(user(r), id(r, "appointmentId"), p(r, "priority"));
-    else throw new vn.hospital.util.BusinessException("Thao tác không hợp lệ.");
-    redirect(r, s, "/reception", "Đã cấp phiếu chờ #" + queue);
+              user(request),
+              id(request, "patientId"),
+              id(request, "scheduleId"),
+              param(request, "symptoms"),
+              param(request, "priority"));
+    else if (param(request, "action").equals("checkin"))
+      queue =
+          service.checkIn(user(request), id(request, "appointmentId"), param(request, "priority"));
+    else throw new BusinessException("Thao tác không hợp lệ.");
+    redirect(request, response, "/reception", "Đã cấp phiếu chờ #" + queue);
   }
 }

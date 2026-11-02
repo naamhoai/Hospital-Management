@@ -1,43 +1,23 @@
-# Kết quả kiểm tra — 29/10/2026
+# Kết quả kiểm tra — 02/11/2026
 
-## Môi trường thực tế
+Source: Servlet/JSP, tên lớp theo chức năng. Build Maven và WAR thành công. Chạy bằng JDK 21 biên dịch release 17, Tomcat 10.1.61 và MySQL 9.3 local; cấu hình Docker vẫn là MySQL 8.4, chưa chạy Docker lại trong lần này.
 
-Windows; JDK 21.0.11 biên dịch `--release 17`; Maven 3.9.11; Apache Tomcat 10.1.61; MySQL **9.3.0 cài trên máy** (cổng test riêng 33307). Cấu hình dự án/Compose hướng tới Java 17+, Tomcat 10.1 và MySQL 8.4. Chưa chạy container MySQL 8.4 trong lần kiểm tra này; không coi kiểm tra 9.3 là chứng nhận riêng cho 8.4.
+## Kiểm thử đã chạy
 
-## Java và database
+- **41 JUnit đạt, 0 lỗi, 0 bỏ qua**, trên `hospital_test` riêng.
+- **86 HTTP checks đạt**: đăng nhập, CSRF/quyền, đặt lịch, check-in, gọi khám, chẩn đoán, chỉ định/hủy, thu tiền, kết quả/tệp, đơn thuốc, kết thúc, hồ sơ/đánh giá, danh mục và báo cáo/PDF/XLSX; các trang JSP được biên dịch thật bởi Tomcat.
+- **36 HTTP checks đạt**: đề nghị/duyệt thu hồi, quyền trưởng khoa, giữ tệp gốc/biên bản, bản kết quả thay thế và thông báo bác sĩ.
+- Nạp **01-schema → 02-seed → 04-demo-data** trên database mới: đủ 25 bảng. Nạp lại 04 trong ngày giữ nguyên số dòng, bệnh án, hóa đơn và tồn kho.
+- Đổi tên 4 bộ tài khoản/phòng demo trong database local sang `clinic01`–`clinic04`: giữ ID/số lượng lịch hẹn; checksum của 11 bảng bệnh án, xét nghiệm, thuốc, hóa đơn, phản hồi và báo cáo không đổi.
 
-Lệnh: `HOSPITAL_INTEGRATION=1`, `DB_URL` trỏ database riêng **hospital_test**, `mvn test package`.
+JUnit kiểm tra thêm đặt lịch đồng thời không vượt chỗ, kê đơn rollback khi thiếu kho, kết quả chỉ sau PAID, duyệt đồng thời chỉ một lần, hủy chỉ định không tính lại phí đã hủy, thanh toán cạnh tranh với hủy, quyền sở hữu hồ sơ/tệp và doanh thu không tính hóa đơn chưa trả.
 
-| Bộ kiểm thử | Số trường hợp | Kết quả |
-|---|---:|---|
-| CoreTest | 6 | Qua |
-| SecurityFilterTest | 7 | Qua |
-| DesignContractTest | 7 | Qua |
-| ClinicalProgressTest | 3 | Qua |
-| NamWorkflowTest | 6 | Qua |
-| WorkflowTest | 3 | Qua |
-| NamRevisionTest | 9 | Qua |
-| **Tổng** | **41** | **Không lỗi, không bỏ qua** |
+HTTP dùng Tomcat test cổng 3301 và database tách biệt; không tiêu thụ các ca demo chính. Các database test được dọn sau khi hoàn tất. Kết quả Java tại `target/surefire-reports`, HTTP tại `target/http-smoke-results.txt` và `target/http-result-recalls-results.txt`; `target` được Git bỏ qua.
 
-- Kiểm tra mật khẩu salted hash, HMAC, validation, Excel thực (ZIP/OpenXML), PDF nhiều trang.
-- CSRF, session hết hạn không replay POST, role filtering.
-- Controller không truy cập DAO, SQL chỉ ở DAO, 18 bảng nghiệp vụ, chữ ký domain typed, Java Bean mapping, PDF giữ dấu tiếng Việt, filter whitelist, tệp sai định dạng/quá lớn/traversal.
-- Nam: quyền sở hữu hồ sơ/đơn/tệp; tồn kho; hủy chỉ định và tính hóa đơn; kết quả chỉ sau PAID, khóa sau duyệt; hai kỹ thuật viên duyệt đồng thời chỉ thành công một lần; ngày/khoa/dịch vụ/phương thức/nhóm báo cáo; không có dữ liệu; file xuất hợp lệ.
-- Bổ sung: tiến trình khám, JSON escaping; hủy chỉ định đã lên hóa đơn UNPAID; chặn PAID/VNPay đang chờ; callback hết hạn; tranh chấp hủy với lập hóa đơn/thu tiền; thu hồi giữ bản gốc, nhập bản thay thế; quyền đúng khoa, PDF bắt buộc, từ chối và hai lần duyệt đồng thời; thông báo đúng bác sĩ; tổng hợp ngày chạy lại không cộng lặp.
-- Toàn viện: đặt → check-in → gọi → chẩn đoán → chỉ định → trả tiền → kết quả → kê đơn → trả thuốc → đóng bệnh án → đánh giá. Rollback tồn kho; tranh suất cuối; hai suất sinh giờ khác nhau.
+## Giới hạn của kết quả
 
-Tạo database tạm mới: `01-schema.sql` xác nhận **18 bảng**, áp dụng `04-operational-extensions.sql` thành **23 bảng**, seed 10 tài khoản thành công. Áp dụng migration `20261027-sds-alignment.sql` trên schema MVP từ Git HEAD: giữ nguyên user ID/password hash và liên kết bệnh án–queue/đơn/kết quả, xóa queue_id dư trong medical_record. Chỉ các database tạm do kiểm tra tạo mới bị dọn sau kiểm tra.
+Không kiểm chứng giao dịch VNPay/SMTP/LIS/dược với nhà cung cấp thật. Chưa đầy đủ mọi nhánh SRS: còn lịch lặp tuần/tháng, Manager duyệt nghỉ, gói khám và các mục trong `SCOPE.md`. Không dùng kết quả kiểm thử này để tuyên bố toàn bộ UC/class/sequence đã khớp 100%.
 
-Ngày 29/10: thử toàn bộ schema mới **01 → 04 → 02 → 05 → 06**, xác nhận **25 bảng**. Đã sao lưu các database local trước khi áp dụng 05 và giữ dữ liệu kết quả cũ. HTTP dùng database demo mới riêng `hospital_nam_http_<mã ngẫu nhiên>`, không ghi vào database chính. Các bản sao lưu tạm đã được xóa theo yêu cầu dọn thư mục ngày 02/11/2026; database đang dùng được giữ nguyên.
+## Chạy lại
 
-## HTTP và giao diện
-
-`scripts/smoke_http.py http://127.0.0.1:3000/hospital`: **86 kiểm tra HTTP qua**. Kiểm tra JSP, role/session/CSRF, đầy đủ luồng bệnh viện, upload multipart PNG, download đúng nội dung, chặn bệnh nhân khác tải tệp/hồ sơ/đơn, không sửa kết quả đã duyệt, PDF đơn/phiếu chỉ định, chặn kê đơn khi còn chờ xét nghiệm, tìm thuốc, bộ lọc và báo cáo, Excel hai sheet (parse toàn bộ XML)/PDF; hủy chỉ định sau lập hóa đơn và kiểm tra tổng còn 360.000 VND.
-
-`scripts/smoke_nam_workflows.py http://127.0.0.1:3000/hospital`: **36 kiểm tra HTTP qua**. Đề nghị thu hồi → trưởng khoa duyệt với PDF → đọc biên bản/tệp gốc hai lần → chặn tải kết quả mất hiệu lực → kỹ thuật viên nhập bản thay thế → lịch sử và polling bác sĩ. Tài khoản/bệnh án/biên bản kiểm thử là dữ liệu giả; PDF dùng để thử upload, không phải chứng nhận chuyên môn thật.
-
-Đã quan sát giao diện đăng nhập và dashboard/bệnh án bác sĩ bằng trình duyệt; kiểm tra trước đó có cả desktop và màn hình nhỏ. Ngày 29/10 kiểm tra thêm đăng nhập trưởng khoa và lịch sử duyệt thu hồi/tệp gốc. Kết quả chi tiết tạm ở target/surefire-reports, target/http-smoke-results.txt, target/http-nam-workflows-results.txt; ảnh UI ở target/ui-result-recalls.png, không commit dữ liệu runtime.
-
-## Phạm vi chưa được xác minh ngoài hệ thống
-
-Chưa có merchant VNPay hoặc SMTP/pharmacy provider thật nên không tuyên bố đã đối soát thanh toán, gửi email/SMS hoặc kiểm tra tương tác thuốc thực tế. Không benchmark 100 người dùng, không kiểm thử Azure/PKI/LIS thật. Các yêu cầu còn thiếu ở SCOPE.md; không đánh đồng “41 test qua” với toàn bộ SRS đã hoàn tất.
+Xem README: unit test bằng `mvn test`; integration bật `HOSPITAL_INTEGRATION=1` với database `hospital_test` vừa tạo bằng schema/seed nền. Script HTTP chỉ chạy trên database test local được chuẩn bị riêng, theo thứ tự `smoke_http.py` rồi `smoke_result_recalls.py`.

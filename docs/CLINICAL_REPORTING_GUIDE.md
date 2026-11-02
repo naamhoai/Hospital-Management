@@ -1,4 +1,4 @@
-# Hướng dẫn đọc code phần Nam
+# Hướng dẫn đọc code khám bệnh, xét nghiệm và báo cáo
 
 Bản cập nhật 29/10/2026. Không dùng Spring; vẫn là Servlet/JSP → Service → DAO → MySQL. Comment tiếng Việt tập trung ở quy tắc nghiệp vụ và transaction; getter/setter giữ ngắn.
 
@@ -63,9 +63,7 @@ Tài khoản demo: `head@hospital.test`, mật khẩu `Demo@1234`, phụ trách 
 
 ## 5. Cài database
 
-Database đã có schema SDS-aligned: sao lưu, chạy **05-nam-workflows.sql một lần** bằng tài khoản có quyền ALTER/CREATE. Script giữ các TestResult cũ và thêm UNIQUE cho kết quả đang có hiệu lực. Không chạy lại schema/seed trên dữ liệu đã có.
-
-Database mới: **01-schema → 04-operational-extensions → 02-seed → 05-nam-workflows**. `06-demo-department-head.sql` là tùy chọn cho demo. Compose đã mount theo đúng thứ tự.
+Database mới: chạy **01-schema.sql → 02-seed.sql**, sau đó **04-demo-data.sql** nếu cần bộ ca demo. Schema đã chứa mọi cột/ràng buộc cần thiết; không còn các file extension riêng. Tài khoản trưởng khoa nằm trong 02-seed. Database hiện tại đủ bảng thì giữ nguyên, không chạy lại 01/02.
 
 Schema thực thi hiện có **25 bảng**: 18 nghiệp vụ + 5 kỹ thuật cũ + result_recall_request và report_daily_summary. Quan hệ ClinicalOrder → TestResult vẫn là 0..1 bản đang có hiệu lực; phần lịch sử bổ sung giữ nhiều phiên bản cũ. Báo cáo/class diagram cần thể hiện rõ phần mở rộng này.
 

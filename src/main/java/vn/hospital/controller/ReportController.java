@@ -11,25 +11,29 @@ import vn.hospital.util.*;
 
 @WebServlet("/reports")
 public class ReportController extends BaseController {
-  protected void doGet(HttpServletRequest r, HttpServletResponse s)
+  protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     var filter = new ReportFilter();
     filter.setFromDate(
-        p(r, "from").isBlank() ? LocalDate.now().withDayOfMonth(1) : Checks.date(p(r, "from")));
-    filter.setToDate(p(r, "to").isBlank() ? LocalDate.now() : Checks.date(p(r, "to")));
+        param(request, "from").isBlank()
+            ? LocalDate.now().withDayOfMonth(1)
+            : Checks.date(param(request, "from")));
+    filter.setToDate(
+        param(request, "to").isBlank() ? LocalDate.now() : Checks.date(param(request, "to")));
     filter.setDepartmentId(
-        p(r, "departmentId").isBlank() ? null : Actors.id(id(r, "departmentId")));
-    filter.setServiceId(p(r, "serviceId").isBlank() ? null : Actors.id(id(r, "serviceId")));
-    filter.setPaymentMethod(p(r, "method"));
-    filter.setServiceType(p(r, "serviceType"));
-    filter.setGroupBy(p(r, "groupBy").isBlank() ? "DAY" : p(r, "groupBy"));
-    String type = p(r, "type").isBlank() ? "flow" : p(r, "type");
+        param(request, "departmentId").isBlank() ? null : Actors.id(id(request, "departmentId")));
+    filter.setServiceId(
+        param(request, "serviceId").isBlank() ? null : Actors.id(id(request, "serviceId")));
+    filter.setPaymentMethod(param(request, "method"));
+    filter.setServiceType(param(request, "serviceType"));
+    filter.setGroupBy(param(request, "groupBy").isBlank() ? "DAY" : param(request, "groupBy"));
+    String type = param(request, "type").isBlank() ? "flow" : param(request, "type");
     if (type.equals("flow")) filter.setServiceType("");
-    var service = new AnalyticsService(user(r));
-    String format = p(r, "format");
+    var service = new AnalyticsService(user(request));
+    String format = param(request, "format");
     if (!format.isBlank()) {
       download(
-          s,
+          response,
           service.exportReport(type, filter, format),
           format.equals("pdf")
               ? "application/pdf"
@@ -38,11 +42,11 @@ public class ReportController extends BaseController {
       return;
     }
     var report = service.generateReport(type, filter);
-    r.setAttribute("report", report);
-    r.setAttribute("rows", report.tableRows());
-    r.setAttribute("filter", filter);
-    r.setAttribute("type", type);
-    service.filterOptions().forEach(r::setAttribute);
-    view(r, s, "reports");
+    request.setAttribute("report", report);
+    request.setAttribute("rows", report.tableRows());
+    request.setAttribute("filter", filter);
+    request.setAttribute("type", type);
+    service.filterOptions().forEach(request::setAttribute);
+    view(request, response, "reports");
   }
 }

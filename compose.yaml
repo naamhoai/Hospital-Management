@@ -11,12 +11,8 @@ services:
     volumes:
       - hospital-db:/var/lib/mysql
       - ./database/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./database/04-operational-extensions.sql:/docker-entrypoint-initdb.d/02-extensions.sql:ro
-      - ./database/02-seed.sql:/docker-entrypoint-initdb.d/03-seed.sql:ro
-      - ./database/05-nam-workflows.sql:/docker-entrypoint-initdb.d/04-nam-workflows.sql:ro
-      - ./database/06-demo-department-head.sql:/docker-entrypoint-initdb.d/05-demo-head.sql:ro
-      - ./database/07-demo-main-flow.sql:/docker-entrypoint-initdb.d/06-demo-main-flow.sql:ro
-      - ./database/08-demo-web-workflows.sql:/docker-entrypoint-initdb.d/07-demo-web-workflows.sql:ro
+      - ./database/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ./database/04-demo-data.sql:/docker-entrypoint-initdb.d/03-demo.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s

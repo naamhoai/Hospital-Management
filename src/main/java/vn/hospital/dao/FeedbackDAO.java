@@ -2,6 +2,7 @@ package vn.hospital.dao;
 
 import java.sql.*;
 import java.util.*;
+import vn.hospital.model.Feedback;
 import vn.hospital.util.Database;
 
 public class FeedbackDAO {
@@ -20,8 +21,7 @@ public class FeedbackDAO {
     return Jdbc.one(c, "SELECT * FROM medical_record WHERE record_id=? FOR UPDATE", values);
   }
 
-  public java.util.List<java.util.Map<String, Object>> findEligibleFeedbackRecords(
-      Object... values) {
+  public List<Map<String, Object>> findEligibleFeedbackRecords(Object... values) {
     return Jdbc.read(
         "SELECT m.record_id,m.diagnosis,m.closed_at,u.full_name doctor_name,f.rating FROM"
             + " medical_record m JOIN users u ON u.user_id=m.doctor_id LEFT JOIN feedback f"
@@ -30,11 +30,10 @@ public class FeedbackDAO {
         values);
   }
 
-  public vn.hospital.model.Feedback findById(Integer id) {
+  public Feedback findById(Integer id) {
     return Database.read(
         c ->
             BeanMapper.map(
-                Jdbc.one(c, "SELECT * FROM feedback WHERE feedback_id=?", id),
-                vn.hospital.model.Feedback.class));
+                Jdbc.one(c, "SELECT * FROM feedback WHERE feedback_id=?", id), Feedback.class));
   }
 }
