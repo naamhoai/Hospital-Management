@@ -28,7 +28,7 @@ Lệnh: `HOSPITAL_INTEGRATION=1`, `DB_URL` trỏ database riêng **hospital_test
 
 Tạo database tạm mới: `01-schema.sql` xác nhận **18 bảng**, áp dụng `04-operational-extensions.sql` thành **23 bảng**, seed 10 tài khoản thành công. Áp dụng migration `20261027-sds-alignment.sql` trên schema MVP từ Git HEAD: giữ nguyên user ID/password hash và liên kết bệnh án–queue/đơn/kết quả, xóa queue_id dư trong medical_record. Chỉ các database tạm do kiểm tra tạo mới bị dọn sau kiểm tra.
 
-Ngày 29/10: thử toàn bộ schema mới **01 → 04 → 02 → 05 → 06**, xác nhận **25 bảng**. Sao lưu các database local trước khi áp dụng 05; giữ dữ liệu kết quả cũ. HTTP dùng database demo mới riêng `hospital_nam_http_<mã ngẫu nhiên>`, không ghi vào database chính. Các tệp sao lưu ở `.local/backups` được gitignore.
+Ngày 29/10: thử toàn bộ schema mới **01 → 04 → 02 → 05 → 06**, xác nhận **25 bảng**. Đã sao lưu các database local trước khi áp dụng 05 và giữ dữ liệu kết quả cũ. HTTP dùng database demo mới riêng `hospital_nam_http_<mã ngẫu nhiên>`, không ghi vào database chính. Các bản sao lưu tạm đã được xóa theo yêu cầu dọn thư mục ngày 02/11/2026; database đang dùng được giữ nguyên.
 
 ## HTTP và giao diện
 

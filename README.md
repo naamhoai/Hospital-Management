@@ -62,6 +62,10 @@ Tất cả dùng mật khẩu **`Demo@1234`**. Dữ liệu trong seed là giả 
 
 Seed tạo ca khám ngày chạy SQL, ngày hôm sau và một số ngày kế tiếp. Nếu seed đã cũ, đăng nhập bác sĩ/admin tạo ca mới ở `/schedules`. Lễ tân chỉ check-in lịch của hôm nay. Các tài khoản dùng chung một vai trò; thành viên nhóm không đồng nghĩa vai trò người dùng.
 
+**Bộ demo đầy đủ:** chạy thêm `database/07-demo-main-flow.sql` trên database đã có schema/migration 05. Script chỉ bổ sung, có thể chạy lại cùng ngày mà không nhân đôi dữ liệu; tạo bộ chung 12 bệnh nhân/2 bác sĩ với các ca ở từng bước và lịch sử có doanh thu, cùng 4 bộ test riêng cho Khánh–Tráng–Kiên–Nam (mỗi người 1 bác sĩ, 4 bệnh nhân, 1 phòng và lịch 9 ngày). Xem [tài khoản và từng bước test](docs/DEMO_MAIN_FLOW.md). Compose tự nạp bộ này khi khởi tạo volume mới; không xóa volume cũ chỉ để nạp demo. Máy khác cần chạy SQL trên database của máy đó, dữ liệu local không tự đồng bộ qua Git.
+
+**Dữ liệu hiển thị ngay trên web:** chạy tiếp `database/08-demo-web-workflows.sql` sau script 07. Mỗi bác sĩ có phiếu chờ đã check-in, bệnh án, chỉ định xét nghiệm, đơn thuốc, hóa đơn và lịch sử đánh giá; không chỉ có lịch hẹn BOOKED. Ngày 02/11/2026 đã nạp cho cả 8 tài khoản bác sĩ trên máy local. Xem bảng bệnh nhân 05–09 trong hướng dẫn demo. Script giữ nguyên các ca đang xử lý và không tạo thêm ca đang khám nếu bác sĩ đã có một ca.
+
 ## Kịch bản demo
 
 1. **Patient:** tìm bác sĩ, vào Lịch khám đặt ca hôm nay còn giờ trống. Ghi lại mã lịch.
@@ -95,6 +99,8 @@ docs/                          Phân công và phạm vi triển khai
 Controller chỉ nhận HTTP, gọi Service và forward JSP. Toàn bộ SQL nghiệp vụ nằm trong DAO; Service điều phối transaction và kiểm tra quyền. DAO ánh xạ domain sang Java Bean qua `BeanMapper`; các danh sách JOIN cho màn hình vẫn là projection `Map`, không thay thế domain model.
 
 Chi tiết đối chiếu báo cáo, CD10–CD12/SQ16–SQ20, quan hệ ERD và những điểm tài liệu tự mâu thuẫn nằm trong [docs/DESIGN_TRACEABILITY.md](docs/DESIGN_TRACEABILITY.md). `model` chính là package `bean (model)` trong bảng mô tả package; `integration` và `listener` chứa adapter/tác vụ khởi động kỹ thuật.
+
+Mô tả Software Architecture/Package Diagram khớp bản JSP hiện tại: [docs/ARCHITECTURE_CURRENT.md](docs/ARCHITECTURE_CURRENT.md).
 
 ### Thay đổi trên nhánh Nam
 

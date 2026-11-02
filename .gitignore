@@ -10,3 +10,7 @@ target/
 src/main/resources/application-local.properties
 __pycache__/
 *.pyc
+*.bak
+*.bak_*
+*.backup
+*.tmp
