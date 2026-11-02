@@ -14,6 +14,7 @@ public class ServiceCatalogController extends BaseController {
       throws ServletException, IOException {
     request.setAttribute("services", new ServiceCatalogService().findCatalogServices());
     request.setAttribute("departments", new ServiceCatalogService().findDepartments());
+    request.setAttribute("componentOptions", new ServiceCatalogService().componentOptions());
     view(request, response, "services");
   }
 
@@ -25,9 +26,15 @@ public class ServiceCatalogController extends BaseController {
             param(request, "serviceId").isBlank() ? 0 : id(request, "serviceId"),
             id(request, "departmentId"),
             param(request, "name"),
+            param(request, "description"),
             param(request, "category"),
             Checks.money(param(request, "price")),
-            param(request, "status"));
+            param(request, "status"),
+            request.getParameterValues("componentId") == null
+                ? java.util.List.of()
+                : java.util.Arrays.stream(request.getParameterValues("componentId"))
+                    .map(value -> vn.hospital.util.Actors.id(Checks.id(value)))
+                    .toList());
     redirect(
         request, response, "/services", "Đã lưu dịch vụ. Giá mới áp dụng cho phát sinh tiếp theo.");
   }

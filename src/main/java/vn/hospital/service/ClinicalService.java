@@ -1,6 +1,8 @@
 package vn.hospital.service;
 
 import java.io.File;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import vn.hospital.dao.*;
 import vn.hospital.model.*;
@@ -19,7 +21,12 @@ public class ClinicalService {
         .findAllActive().stream().filter(s -> !"CONSULTATION".equals(s.getCategory())).toList();
   }
 
-  /** Tạo chỉ định sau chẩn đoán sơ bộ; chụp đơn giá tại thời điểm bác sĩ chỉ định. */
+  /**
+   * SQ18 - Tạo chỉ định cận lâm sàng. Đầu vào: ClinicalOrderRequest gồm recordId, serviceIds và chỉ
+   * dẫn; bác sĩ lấy từ phiên. Yêu cầu bệnh án OPEN, đúng bác sĩ và đã có chẩn đoán sơ bộ. Dịch vụ
+   * lẻ tạo một chỉ định; gói được tách thành các chỉ định thành phần, phân bổ đúng giá gói. Đầu ra:
+   * List<ClinicalOrder> đã lưu, PENDING/PENDING_PAYMENT; chưa tự làm xét nghiệm hay thu tiền.
+   */
   public List<ClinicalOrder> createClinicalOrders(ClinicalOrderRequest request) {
     Actors.require(actor, "DOCTOR");
     Checks.require(
@@ -45,23 +52,61 @@ public class ClinicalService {
               "Cần lưu chẩn đoán sơ bộ trước khi chỉ định.");
           var dao = new ClinicalOrderDAO();
           var orders = new ArrayList<ClinicalOrder>();
+          var selectedServices = new MedicalServiceDAO();
+          var expandedIds = new HashSet<Integer>();
           for (Integer id : request.getServiceIds()) {
             Checks.require(id != null && id > 0, "Dịch vụ không hợp lệ.");
-            MedicalService service = new MedicalServiceDAO().findById(connection, id);
+            MedicalService service = selectedServices.findById(connection, id);
+            requireOrderable(service);
+            if (!"PACKAGE".equals(service.getCategory())) {
+              addOrder(
+                  connection,
+                  orders,
+                  expandedIds,
+                  record.getRecordId(),
+                  service,
+                  null,
+                  service.getUnitPrice(),
+                  request.getInstructions());
+              continue;
+            }
+            // Một gói được tách thành các chỉ định để Lab nhập từng kết quả riêng.
+            var members = selectedServices.findPackageComponents(connection, id);
+            Checks.require(members.size() >= 2, "Gói chưa có đủ thành phần.");
+            BigDecimal total = BigDecimal.ZERO;
+            for (var member : members) {
+              requireOrderable(member);
+              Checks.require(
+                  !"PACKAGE".equals(member.getCategory()), "Không hỗ trợ gói lồng nhau.");
+              total = total.add(member.getUnitPrice());
+            }
             Checks.require(
-                service != null
-                    && "ACTIVE".equals(service.getStatus())
-                    && !"CONSULTATION".equals(service.getCategory()),
-                "Dịch vụ không còn hoạt động.");
-            Checks.require(
-                dao.findExisting(connection, record.getRecordId(), id) == null,
-                "Dịch vụ đã được chỉ định cho bệnh án này.");
-            var order = new ClinicalOrder();
-            order.setRecordId(record.getRecordId());
-            order.setServiceId(id);
-            order.setInstructions(request.getInstructions());
-            order.setUnitPrice(service.getUnitPrice());
-            orders.add(order);
+                total.signum() > 0 || service.getUnitPrice().signum() == 0,
+                "Gói có giá nhưng tổng giá thành phần bằng 0.");
+            BigDecimal remaining = service.getUnitPrice();
+            for (int index = 0; index < members.size(); index++) {
+              var member = members.get(index);
+              // Làm tròn xuống các dòng đầu; dòng cuối nhận phần dư để tổng đúng giá gói.
+              BigDecimal price =
+                  index == members.size() - 1
+                      ? remaining
+                      : total.signum() == 0
+                          ? BigDecimal.ZERO
+                          : service
+                              .getUnitPrice()
+                              .multiply(member.getUnitPrice())
+                              .divide(total, 2, RoundingMode.DOWN);
+              remaining = remaining.subtract(price);
+              addOrder(
+                  connection,
+                  orders,
+                  expandedIds,
+                  record.getRecordId(),
+                  member,
+                  id,
+                  price,
+                  request.getInstructions());
+            }
           }
           dao.saveAll(connection, orders);
           for (var order : orders)
@@ -73,6 +118,38 @@ public class ClinicalService {
           }
           return savedOrders;
         });
+  }
+
+  private void requireOrderable(MedicalService service) {
+    Checks.require(
+        service != null
+            && "ACTIVE".equals(service.getStatus())
+            && !"CONSULTATION".equals(service.getCategory()),
+        "Dịch vụ không còn hoạt động.");
+  }
+
+  /** Chụp giá vào clinical_order; một dịch vụ không được lặp giữa gói và lựa chọn lẻ. */
+  private void addOrder(
+      java.sql.Connection connection,
+      List<ClinicalOrder> orders,
+      Set<Integer> ids,
+      int recordId,
+      MedicalService service,
+      Integer packageId,
+      BigDecimal price,
+      String instructions)
+      throws java.sql.SQLException {
+    Checks.require(ids.add(service.getServiceId()), "Dịch vụ bị trùng giữa các lựa chọn/gói khám.");
+    Checks.require(
+        new ClinicalOrderDAO().findExisting(connection, recordId, service.getServiceId()) == null,
+        "Dịch vụ đã được chỉ định cho bệnh án này.");
+    var order = new ClinicalOrder();
+    order.setRecordId(recordId);
+    order.setServiceId(service.getServiceId());
+    order.setPackageServiceId(packageId);
+    order.setInstructions(instructions);
+    order.setUnitPrice(price);
+    orders.add(order);
   }
 
   /** Hủy chỉ định chưa trả tiền; hóa đơn và chỉ định cùng thành công hoặc cùng rollback. */
@@ -101,6 +178,11 @@ public class ClinicalService {
         });
   }
 
+  /**
+   * SQ19 - Nhập và duyệt kết quả. Đầu vào: orderId, nội dung/kết luận kết quả; kỹ thuật viên lấy từ
+   * phiên. Gọi cùng hàm lưu có upload=null. Chỉ được duyệt chỉ định đã trả phí, chưa có kết quả
+   * hiệu lực. Đầu ra: TestResult mới và clinical_order COMPLETED trong cùng transaction.
+   */
   public TestResult recordTestResult(Integer orderId, TestResult result) {
     return recordTestResult(orderId, result, null);
   }

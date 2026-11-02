@@ -44,7 +44,11 @@ public class AnalyticsService {
     Checks.require(f.getServiceId() == null || f.getServiceId() > 0, "Mã dịch vụ không hợp lệ.");
   }
 
-  /** Chọn loại báo cáo; phần này chỉ đọc dữ liệu và không thay đổi hồ sơ khám. */
+  /**
+   * SQ20/WF04 - Lập báo cáo cho quản lý. Đầu vào: type flow/revenue và ReportFilter gồm ngày, khoa,
+   * dịch vụ, phương thức, cách nhóm. Kiểm tra quyền và bộ lọc, chọn truy vấn đọc của ReportDAO. Đầu
+   * ra: PatientFlowReport hoặc RevenueReport cho bảng/biểu đồ; dữ liệu rỗng vẫn là kết quả hợp lệ.
+   */
   public ReportData generateReport(String type, ReportFilter filter) {
     Actors.require(actor, "MANAGER", "ADMIN");
     validateFilter(filter);
@@ -55,6 +59,10 @@ public class AnalyticsService {
     };
   }
 
+  /**
+   * SQ20 - Thống kê lượt khám. Nhận bộ lọc, đọc số lượt/hoàn tất/hủy/vắng rồi tính tỷ lệ và chuỗi
+   * biểu đồ. Trả PatientFlowReport; mẫu số bằng 0 trả tỷ lệ 0, không sửa các lịch hẹn.
+   */
   public PatientFlowReport getPatientFlowReport(ReportFilter filter) {
     Actors.require(actor, "MANAGER", "ADMIN");
     validateFilter(filter);
@@ -74,6 +82,11 @@ public class AnalyticsService {
     return report;
   }
 
+  /**
+   * SQ20 - Thống kê doanh thu. Nhận bộ lọc thời gian/khoa/dịch vụ/phương thức; chỉ cộng invoice
+   * PAID từ các dòng phí. Trả RevenueReport và chuỗi biểu đồ; không tính hóa đơn UNPAID vào doanh
+   * thu.
+   */
   public RevenueReport getRevenueReport(ReportFilter filter) {
     Actors.require(actor, "MANAGER", "ADMIN");
     validateFilter(filter);
@@ -96,7 +109,11 @@ public class AnalyticsService {
             .divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
   }
 
-  /** Dùng cùng bộ lọc với màn hình để số liệu trong file khớp số liệu đang xem. */
+  /**
+   * SQ20 - Xuất báo cáo đang xem. Đầu vào: cùng type/filter với màn hình và format pdf/xlsx. Lập
+   * lại dữ liệu bằng cùng bộ lọc, trả file tạm để Controller gửi về trình duyệt. Không ghi hoặc
+   * thay đổi bệnh án/hóa đơn trong quá trình xuất.
+   */
   public File exportReport(String type, ReportFilter filter, String format) {
     ReportData report = generateReport(type, filter);
     return switch (format.toLowerCase(Locale.ROOT)) {

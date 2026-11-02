@@ -1,93 +1,100 @@
-# Hospital Appointment & Medical Service Management
+# Hospital Management — Servlet + JSP
 
-Dự án Java 17, Servlet 6, JSP/JSTL, JDBC, Tomcat 10.1 và MySQL 8.4. Giao diện dùng JSP, CSS và JavaScript thuần. Maven đóng gói thành `hospital.war`.
+Ứng dụng demo 4 main workflow bằng **Java 17+, Servlet 6, JSP/JSTL, JDBC, MySQL 8.4+ và Tomcat 10.1**. UI chỉ dùng HTML, CSS và JavaScript thuần; không có React, Bootstrap, Node/npm hoặc bộ bài test.
 
-## Cấu trúc code
+## Người mới pull code: làm đúng 3 bước
 
-| Thư mục | Trách nhiệm |
-|---|---|
-| `controller` | Nhận request, đọc tham số, gọi Service và chọn JSP hoặc file tải về |
-| `service` | Kiểm tra quyền, điều kiện nghiệp vụ và transaction |
-| `dao` | Câu SQL, PreparedStatement và ánh xạ dữ liệu |
-| `model` | Entity, request và dữ liệu báo cáo |
-| `filter` | Phiên đăng nhập, vai trò và CSRF |
-| `integration` | Queue context, VNPay, email và kết nối dược tùy chọn |
-| `listener` | Tác vụ nền và nhãn giao diện |
-| `util` | Kết nối DB, validation, mật khẩu và xử lý tệp |
-| `src/main/webapp/WEB-INF/views` | Các trang JSP |
+### 1. Nạp đúng một file database
 
-Tên lớp theo chức năng, không theo tên người làm: `AppointmentController`, `ServiceCatalogService`, `ClinicalService`, `EMRService`, `AnalyticsService`. Test dùng `HospitalWorkflowTest`, `ClinicalWorkflowTest`, `ClinicalSafetyTest`.
+Mở **`database/hospital.sql`** trong MySQL Workbench bằng **File → Open SQL Script**, rồi chọn **Query → Execute (All or Selection)** để chạy nguyên file.
 
-## Tạo database mới
+File này đã có **CREATE DATABASE, CREATE TABLE và INSERT dữ liệu trình bày**. Không có procedure/DELIMITER, file seed phụ, migration hoặc backup. Database được tạo là **`hospital_demo`**; không đụng database `hospital` của bản cũ. Chỉ nạp một lần khi `hospital_demo` chưa có bảng. Sau đó mọi thao tác demo thực hiện trên web, không nạp lại SQL để reset.
 
-Thư mục `database` chỉ còn 4 file:
+Có thể dùng PowerShell thay Workbench:
 
-1. `01-schema.sql`: toàn bộ 25 bảng, gồm 18 bảng nghiệp vụ và 7 bảng hỗ trợ.
-2. `02-seed.sql`: tài khoản theo vai trò, khoa/phòng, thuốc/dịch vụ và ca khám mẫu.
-3. `03-create-local-user.sql`: tùy chọn, cấp quyền cho user kết nối local; sửa mật khẩu trước khi dùng.
-4. `04-demo-data.sql`: dữ liệu các bước đặt lịch, tiếp nhận, khám, xét nghiệm, thanh toán và báo cáo.
-
-Trên database mới, chạy **01 → 02 → 04** bằng MySQL Workbench; chạy thêm 03 nếu cần user ứng dụng. Không chạy lại 01/02 trên database đang có dữ liệu. Database hiện tại đã đủ 25 bảng thì giữ nguyên; 04 có thể bổ sung lại dữ liệu demo mà không reset các ca đã xử lý trong ngày.
-
-Các file extension/migration và seed demo rời đã được gộp vào 01/02/04; không cần tìm hay chạy các file cũ. Docker cũng nạp 3 file này khi khởi tạo volume mới, không tự nạp lại khi volume đã có dữ liệu.
-
-```bash
-docker compose up --build
+```powershell
+.\scripts\setup-database.ps1 -Port 3306 -User root
 ```
 
-Mở `http://localhost:8080/hospital`. Xem [tài khoản và dữ liệu demo](docs/DEMO_MAIN_FLOW.md).
+Đổi port/user theo kết nối MySQL trên máy bạn. Script sẽ hỏi mật khẩu MySQL, không sinh thêm file database.
 
-## Chạy local cổng 3000
+### 2. Điền cấu hình MySQL của máy mình
 
-Cần JDK 17 trở lên, Maven trên PATH và MySQL đang chạy. Tạo `src/main/resources/application-local.properties` (file này được Git bỏ qua):
+Copy `src/main/resources/application-local.properties.example` thành **`src/main/resources/application-local.properties`**, rồi sửa:
 
 ```properties
-DB_URL=jdbc:mysql://127.0.0.1:3306/hospital?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
-DB_USER=hospital
-DB_PASSWORD=your-local-password
+DB_URL=jdbc:mysql://127.0.0.1:3306/hospital_demo?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+DB_USER=root
+DB_PASSWORD=mat_khau_mysql_cua_may_ban
 APP_BASE_URL=http://localhost:3000/hospital
 ```
 
-Đổi host/port và tài khoản theo máy đang dùng; biến môi trường cùng tên được ưu tiên hơn file cấu hình.
+`DB_PASSWORD` là mật khẩu **MySQL**, không phải mật khẩu tài khoản web. Đổi `3306` nếu server dùng port khác. File cấu hình riêng này được Git bỏ qua, vì vậy pull code không tự có mật khẩu của máy người khác.
+
+### 3. Chạy web
+
+Cài JDK 17 trở lên, Maven và MySQL. Từ thư mục dự án:
 
 ```powershell
-./scripts/run-dev.ps1 -Port 3000
+.\scripts\run-dev.ps1
 ```
 
-Hoặc `mvn clean package`, chép `target/hospital.war` vào `webapps` của Tomcat 10.1. Không commit cấu hình mật khẩu, thư mục `.local` hay `target`.
+Mở **http://localhost:3000/hospital/login**. Script build WAR rồi chạy Tomcat local; không cần cấu hình Tomcat trong IDE. Nếu dùng Maven trực tiếp:
 
-## Luồng demo liên tục cho cả nhóm
-
-**Bệnh nhân tìm bác sĩ → đặt lịch → lễ tân check-in/cấp số → bác sĩ gọi vào khám → lưu chẩn đoán → chỉ định nếu cần → thu phí → kỹ thuật viên duyệt kết quả → bác sĩ kê đơn/kết thúc → thu khoản còn lại → bệnh nhân xem hồ sơ/đánh giá → quản lý xem báo cáo.**
-
-Servlet gọi Service; Service kiểm tra quyền/điều kiện rồi gọi DAO trong transaction. DAO dùng JDBC đến MySQL. Controller chuyển dữ liệu sang JSP để hiển thị; không viết SQL trong Controller hoặc Service.
-
-Chẩn đoán sơ bộ phải có trước chỉ định. Kết quả chỉ duyệt sau PAID. Đơn thuốc kiểm tra tồn kho và chỉ định chưa hoàn tất. Hóa đơn chỉ lấy các phí chưa lập hóa đơn; đóng bệnh án và trả hết tiền là hai trạng thái riêng.
-
-Xem [đường đi từng chức năng](docs/DEMO_MAIN_FLOW.md), [hướng dẫn khám và báo cáo](docs/CLINICAL_REPORTING_GUIDE.md), [phân công thuyết trình](docs/TEAM_ASSIGNMENT.md), [đối chiếu sơ đồ](docs/CODE_DIAGRAM_REVIEW.md) và [phạm vi còn thiếu](docs/SCOPE.md).
-
-## Kiểm thử
-
-```bash
-mvn clean test
+```powershell
 mvn package
+mvn exec:java
 ```
 
-Test có ghi database chỉ bật khi `HOSPITAL_INTEGRATION=1` và `DB_URL` trỏ tới **hospital_test** dùng riêng cho test. Chuẩn bị database này bằng 01/02, đổi tên database trong `CREATE DATABASE`/`USE` sang `hospital_test`. Không nạp 04 trước JUnit vì các test tự tạo lượt khám.
+Dừng web bằng Ctrl+C. Nếu IDE cần deploy: dùng `target/hospital.war` với Tomcat **10.1**, không dùng Tomcat 9. Chỉ chạy một server trên cổng 3000.
 
-```powershell
-$env:HOSPITAL_INTEGRATION='1'
-$env:DB_URL='jdbc:mysql://127.0.0.1:3306/hospital_test?serverTimezone=Asia/Ho_Chi_Minh'
-# Cấu hình DB_USER và DB_PASSWORD trên máy của bạn.
-mvn test
-```
+## Tài khoản web
 
-Kiểm thử HTTP trên database test riêng: `python scripts/smoke_http.py URL`, sau đó `python scripts/smoke_result_recalls.py URL`. Các script tạo và xử lý dữ liệu thử; không dùng để kiểm tra chỉ đọc trên database đang demo.
+Tất cả tài khoản bên dưới có mật khẩu **`Demo@1234`**.
 
-## Tích hợp tùy chọn và giới hạn
+| Vai trò | Email |
+|---|---|
+| Bệnh nhân mới để demo từ đầu | `patient@hospital.test` |
+| Bệnh nhân đã đặt lịch lúc nạp SQL | `patient2@hospital.test` |
+| Bệnh nhân dự phòng | `patient3@hospital.test` |
+| Bác sĩ demo từ đầu | `doctor@hospital.test` |
+| Bác sĩ có sẵn bệnh án/kết quả | `doctor2@hospital.test` |
+| Lễ tân | `reception@hospital.test` |
+| Kỹ thuật viên | `lab@hospital.test` |
+| Thu ngân | `cashier@hospital.test` |
+| Quản lý | `manager@hospital.test` |
+| Quản trị | `admin@hospital.test` |
+| Trưởng khoa cho chức năng thu hồi kết quả | `head@hospital.test` |
 
-VNPay cần `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `APP_BASE_URL` và cấu hình callback `/payment/return`, `/payment/ipn`. Code kiểm tra chữ ký/số tiền; chưa cấu hình merchant thì dùng tiền mặt để demo. Email gửi từ outbox khi có SMTP; SMS/LIS chưa có adapter thực tế.
+Không nhập tài khoản MySQL vào trang đăng nhập web. Đổi vai trò bằng đăng xuất/đăng nhập; nếu cần mở hai vai trò đồng thời, dùng hai trình duyệt/profile riêng vì các tab cùng trình duyệt dùng chung session.
 
-Kết nối dược bật qua `PHARMACY_BASE_URL`, theo hợp đồng của dự án; chưa cấu hình thì không báo đã kiểm tra tương tác hay đồng bộ thành công. `ICD_CATALOG_FILE` có thể trỏ tới CSV nhóm duyệt; resource mặc định chỉ chứa mã minh họa.
+## Bốn main workflow
 
-Lịch lặp tuần/tháng, Manager duyệt nghỉ và gói khám vẫn còn thiếu so với toàn bộ SRS. Việc dọn code không thay thế việc hoàn thiện các yêu cầu này; chi tiết nằm trong `docs/SCOPE.md`.
+1. **Khám bệnh:** tìm bác sĩ → đặt lịch → lễ tân check-in → bác sĩ gọi vào khám → chẩn đoán sơ bộ → chỉ định lẻ/gói → thu phí → Lab duyệt kết quả → kê đơn → kết thúc → thu khoản còn lại → xem hồ sơ/đánh giá.
+2. **Lịch bác sĩ:** tạo ca đơn hoặc lặp tuần/tháng → kiểm tra trùng → công bố ca → bác sĩ gửi lý do nghỉ → quản lý duyệt/từ chối → cập nhật ca và lịch hẹn bị ảnh hưởng.
+3. **Danh mục/giá:** quản lý thêm/sửa/ẩn dịch vụ hoặc gói → kiểm tra thông tin/thành phần → lưu. Giá mới không đổi chi phí đã phát sinh.
+4. **Báo cáo:** quản lý chọn lượt khám/doanh thu, ngày/khoa/phương thức → xem bảng và biểu đồ → tùy chọn tải PDF/XLSX. Doanh thu chỉ tính PAID.
+
+Các bước bấm màn hình và chia phần trình bày: [DEMO_MAIN_FLOW.md](docs/DEMO_MAIN_FLOW.md). Hàm tương ứng CD/SQ và dữ liệu vào/ra: [WORKFLOW_CODE_GUIDE.md](docs/WORKFLOW_CODE_GUIDE.md).
+
+## Cấu trúc dễ tìm
+
+`filter → controller → service → dao → MySQL`; Controller chuyển dữ liệu sang JSP để hiển thị. `model` là Java Bean/request/report model; `util` chứa validation/transaction; `integration` chứa kết nối ngoài; `listener` chứa tác vụ nền. `LocalServer` chỉ mở Tomcat local, không xử lý nghiệp vụ.
+
+Các hàm chính có comment tiếng Việt ghi rõ SQ liên quan, đầu vào, điều kiện xử lý và đầu ra. Tên lớp theo chức năng, không theo tên thành viên.
+
+SQL giữ 18 bảng nghiệp vụ của ERD và 8 bảng hỗ trợ triển khai: bộ đếm số, dòng phí, giao dịch, outbox, audit, thu hồi, tổng hợp ngày và thành phần gói. Các cột duyệt nghỉ đặt trong `work_schedule`; gói vẫn dùng entity `MedicalService`, liên kết thành phần qua `service_package_item`.
+
+## Nếu chưa chạy được
+
+- **Không kết nối DB / Access denied:** MySQL phải đang chạy; so lại host, port, `DB_USER`, `DB_PASSWORD` với Workbench.
+- **Unknown database / table / column:** kiểm tra đã nạp `database/hospital.sql` và URL trỏ đúng `hospital_demo`, không trỏ database cũ.
+- **Table already exists:** SQL đã được nạp trước đó. Không chạy lại; điền cấu hình và chạy web. Nếu đã có dữ liệu cần giữ, không tự xóa database.
+- **Cổng 3000 đang dùng:** dừng bản web cũ trước khi mở bản mới.
+- **Không nhận lịch / không gọi người tiếp theo:** chọn lịch đúng hôm nay; ca phải còn giờ/chỗ; bác sĩ hoàn tất ca đang khám trước khi gọi người khác. Có thể tạo thêm ca bằng màn hình Lịch bác sĩ.
+
+## Phạm vi demo
+
+Dùng tiền mặt để đi hết luồng mà không cần tài khoản dịch vụ bên ngoài. VNPay/email/dược là tùy chọn, chỉ hoạt động khi được cấu hình; không báo giả đã thanh toán hoặc đã gửi ra ngoài. Bản này dùng HttpSession theo kiến trúc Servlet/JSP, không triển khai JWT/Redis. SMS/LIS thật, BHYT/hoàn tiền, QR và các quy tắc vận hành nâng cao không thuộc kịch bản demo cơ bản.
+
+Có thể chạy Docker bằng `docker compose up --build`: web vẫn ở localhost:3000, MySQL host port 3307. Docker chỉ tự nạp cùng file SQL khi volume mới; không xóa volume đang có dữ liệu để cập nhật code.

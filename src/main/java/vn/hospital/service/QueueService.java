@@ -58,7 +58,11 @@ public class QueueService {
     return id;
   }
 
-  /** Gọi một người đang chờ và tạo bệnh án nháp; trả queueId cho màn hình khám. */
+  /**
+   * WF01/SQ15 - Bác sĩ gọi người tiếp theo. Đầu vào: AuthUser bác sĩ. Khóa bác sĩ và chọn phiếu
+   * WAITING theo mức ưu tiên/giờ hẹn. Bác sĩ không được mở đồng thời hai lượt khám. Đầu ra:
+   * queueId, trạng thái IN_CONSULTATION và bệnh án nháp duy nhất; null nếu hết người chờ.
+   */
   public Long callNext(AuthUser doctor) {
     Actors.require(doctor, "DOCTOR");
     return Database.tx(
@@ -83,7 +87,11 @@ public class QueueService {
         });
   }
 
-  /** Chỉ chuyển người đang chờ sang phòng cùng khoa và cấp lại số thứ tự tại phòng mới. */
+  /**
+   * SQ15 - Chuyển phòng cho người đang chờ. Đầu vào: lễ tân/quản trị, queueId và mã phòng. Kiểm tra
+   * phòng hoạt động, cùng chuyên khoa. Đầu ra: lưu phòng/số chờ mới theo bộ đếm của ngày/phòng đó;
+   * giữ bác sĩ đã phân công.
+   */
   public void routePatient(AuthUser actor, long queue, String room) {
     Actors.require(actor, "RECEPTIONIST", "ADMIN");
     Database.tx(

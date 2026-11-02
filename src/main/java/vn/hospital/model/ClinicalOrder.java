@@ -8,6 +8,7 @@ public class ClinicalOrder {
   private Integer orderId;
   private Integer recordId;
   private Integer serviceId;
+  private Integer packageServiceId;
   private LocalDateTime orderDate;
   private String instructions;
   private String paymentStatus;
@@ -97,5 +98,13 @@ public class ClinicalOrder {
 
   public void setUnitPrice(BigDecimal v) {
     unitPrice = v;
+  }
+
+  public Integer getPackageServiceId() {
+    return packageServiceId;
+  }
+
+  public void setPackageServiceId(Integer id) {
+    packageServiceId = id;
   }
 }

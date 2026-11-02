@@ -50,10 +50,12 @@ public class ClinicalOrderDAO {
           Actors.id(
               Jdbc.insert(
                   c,
-                  "INSERT INTO clinical_order(record_id,service_id,instructions,unit_price)"
-                      + " VALUES(?,?,?,?)",
+                  "INSERT INTO"
+                      + " clinical_order(record_id,service_id,package_service_id,instructions,unit_price)"
+                      + " VALUES(?,?,?,?,?)",
                   order.getRecordId(),
                   order.getServiceId(),
+                  order.getPackageServiceId(),
                   order.getInstructions(),
                   order.getUnitPrice())));
     }

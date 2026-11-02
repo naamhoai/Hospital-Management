@@ -7,6 +7,7 @@ public class MedicalService {
   private Integer serviceId;
   private Integer departmentId;
   private String name;
+  private String description;
   private String category;
   private BigDecimal unitPrice;
   private String status;
@@ -59,5 +60,13 @@ public class MedicalService {
 
   public void setStatus(String value) {
     this.status = value;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
   }
 }

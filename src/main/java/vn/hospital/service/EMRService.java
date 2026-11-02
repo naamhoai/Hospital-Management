@@ -14,7 +14,12 @@ public class EMRService {
     this.actor = actor;
   }
 
-  /** Nhận queueId từ khối tiếp nhận, xác minh bác sĩ rồi lấy bệnh án tương ứng. */
+  /**
+   * SQ16 - Mở bệnh án theo queueId từ khối tiếp nhận. Đầu vào: queueId, bác sĩ được giữ trong
+   * Service từ HttpSession. QueueContextPort tìm lượt chờ; kiểm tra đúng bác sĩ rồi
+   * MedicalRecordDAO tìm qua appointmentId. Đầu ra: MedicalRecord; không cho bác sĩ tự nhập
+   * patientId để mở tùy ý bệnh án.
+   */
   public MedicalRecord getRecord(Integer queueId) {
     Actors.require(actor, "DOCTOR");
     return Database.tx(
@@ -29,7 +34,12 @@ public class EMRService {
         });
   }
 
-  /** Kiểm tra dữ liệu và quyền sở hữu trước khi lưu chẩn đoán; lỗi sẽ rollback toàn bộ. */
+  /**
+   * SQ16 - Lưu khám lâm sàng và chẩn đoán. Đầu vào: queueId và DiagnosisRequest gồm triệu chứng,
+   * ICD, chẩn đoán, ghi chú. Kiểm tra mã ICD, bác sĩ sở hữu lượt IN_CONSULTATION và bệnh án còn
+   * OPEN. Đầu ra: MedicalRecord đã lưu và audit_log; Controller hiển thị lại EMR. Sai dữ liệu trả
+   * lỗi 422.
+   */
   public MedicalRecord recordClinicalDiagnosis(Integer queueId, DiagnosisRequest request) {
     Actors.require(actor, "DOCTOR");
     Checks.require(request != null, "Thiếu dữ liệu chẩn đoán.");
@@ -65,6 +75,10 @@ public class EMRService {
         });
   }
 
+  /**
+   * SQ16 - Đọc lịch sử bệnh nhân phục vụ khám. Đầu vào: patientId; kiểm tra bác sĩ đã được phân
+   * công khám người đó. Đầu ra: danh sách bệnh án từ MedicalRecordDAO, không sửa hồ sơ lịch sử.
+   */
   public List<MedicalRecord> getPatientHistory(Integer patientId) {
     Actors.require(actor, "DOCTOR");
     return Database.tx(
@@ -88,7 +102,12 @@ public class EMRService {
     return record;
   }
 
-  /** Chỉ kết thúc khi có chẩn đoán và không còn chỉ định đang chờ; tạo hóa đơn cho phí mới. */
+  /**
+   * WF01 - Kết thúc lượt khám sau chẩn đoán và kết quả cần thiết. Đầu vào: queueId của bác sĩ. Chặn
+   * khi thiếu chẩn đoán hoặc còn chỉ định chưa hoàn tất. Đầu ra: bệnh án CLOSED, queue/appointment
+   * COMPLETED và hóa đơn cho khoản chưa tính. CLOSED là hoàn tất chuyên môn, không có nghĩa mọi hóa
+   * đơn đều đã PAID.
+   */
   public void closeRecord(Integer queueId) {
     Actors.require(actor, "DOCTOR");
     Database.tx(

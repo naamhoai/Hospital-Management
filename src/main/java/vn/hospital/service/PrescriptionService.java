@@ -14,6 +14,10 @@ public class PrescriptionService {
     this.actor = actor;
   }
 
+  /**
+   * SQ17 - Tra thuốc cho form kê đơn. Đầu vào từ khóa tên/hoạt chất; trả danh sách thuốc hoạt động.
+   * Chỉ đọc danh mục, không trừ kho ở bước tìm kiếm.
+   */
   public List<Medication> searchMedication(String keyword) {
     Actors.require(actor, "DOCTOR");
     Checks.require(keyword.length() <= 100, "Từ khóa tối đa 100 ký tự.");
@@ -49,7 +53,11 @@ public class PrescriptionService {
     return items;
   }
 
-  /** Chưa được kê đơn nếu còn chờ xét nghiệm; kiểm tra tồn kho sơ bộ để báo lỗi sớm. */
+  /**
+   * SQ17 - Kiểm tra đơn trước khi phát hành. Đầu vào: PrescriptionRequest với recordId, các dòng
+   * medicationId/quantity/dosage và lời dặn. Kiểm tra đúng bác sĩ, bệnh án OPEN, có chẩn đoán, đủ
+   * kết quả và tồn kho. Đầu ra Boolean; chưa lưu đơn hoặc trừ kho tại bước này.
+   */
   public Boolean validatePrescription(PrescriptionRequest request) {
     Actors.require(actor, "DOCTOR");
     List<PrescriptionDetail> items = validateItems(request);
@@ -68,7 +76,12 @@ public class PrescriptionService {
         });
   }
 
-  /** Lưu đơn, các dòng thuốc và trừ kho trong cùng transaction để không bị trừ kho một phần. */
+  /**
+   * SQ17 - Phát hành đơn thuốc. Đầu vào: request đã nhập từ JSP và bác sĩ của phiên. Kiểm tra lại
+   * dữ liệu trong transaction. Khóa từng thuốc theo thứ tự ID, chụp đơn giá, lưu
+   * prescription/detail và trừ tồn kho. Đầu ra: Prescription có ID và các dòng thuốc. Thiếu một
+   * thuốc thì rollback toàn bộ đơn/kho.
+   */
   public Prescription issuePrescription(PrescriptionRequest request) {
     Actors.require(actor, "DOCTOR");
     List<PrescriptionDetail> items = validateItems(request);
@@ -159,6 +172,11 @@ public class PrescriptionService {
         });
   }
 
+  /**
+   * SQ17 - Xuất đơn đã lưu thành PDF. Đầu vào: prescriptionId. Kiểm tra quyền bác sĩ hoặc bệnh nhân
+   * sở hữu đơn. Đầu ra: file PDF tạm có thông tin đơn/thuốc; Controller gửi tải xuống rồi xóa file
+   * tạm.
+   */
   public File printPrescription(Integer id) {
     Map<String, Object> page = prescriptionPage(id);
     Prescription rx = (Prescription) page.get("prescription");

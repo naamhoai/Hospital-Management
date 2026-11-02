@@ -74,16 +74,41 @@ public class ScheduleDAO {
   public List<Map<String, Object>> findActiveDoctors(Object... values) {
     return Jdbc.read(
         "SELECT d.doctor_id,u.full_name FROM doctors d JOIN users u ON u.user_id=d.doctor_id WHERE"
-            + " (?='ADMIN' OR d.doctor_id=?)",
+            + " (? IN ('ADMIN','MANAGER') OR d.doctor_id=?)",
         values);
   }
 
   public List<Map<String, Object>> findDoctorSchedules(Object... values) {
     return Jdbc.read(
         "SELECT w.*,u.full_name doctor_name FROM work_schedule w JOIN users u ON"
-            + " u.user_id=w.doctor_id WHERE (?='ADMIN' OR w.doctor_id=?) ORDER BY work_date"
-            + " DESC,start_time",
+            + " u.user_id=w.doctor_id WHERE (? IN ('ADMIN','MANAGER') OR w.doctor_id=?) ORDER BY"
+            + " work_date DESC,start_time",
         values);
+  }
+
+  /** Ghi yêu cầu nghỉ; khóa ca đã được Service giữ trong transaction. */
+  public void requestLeave(Connection connection, long scheduleId, String reason)
+      throws SQLException {
+    Jdbc.update(
+        connection,
+        "UPDATE work_schedule SET"
+            + " leave_status='PENDING',leave_reason=?,leave_requested_at=NOW(),leave_reviewed_by=NULL,leave_reviewed_at=NULL,leave_review_note=NULL"
+            + " WHERE schedule_id=?",
+        reason,
+        scheduleId);
+  }
+
+  public void reviewLeave(
+      Connection connection, long scheduleId, boolean approved, long reviewerId, String note)
+      throws SQLException {
+    Jdbc.update(
+        connection,
+        "UPDATE work_schedule SET leave_status=?,leave_reviewed_by=?,"
+            + "leave_reviewed_at=NOW(),leave_review_note=? WHERE schedule_id=?",
+        approved ? "APPROVED" : "REJECTED",
+        reviewerId,
+        note,
+        scheduleId);
   }
 
   public WorkSchedule findById(Integer id) {

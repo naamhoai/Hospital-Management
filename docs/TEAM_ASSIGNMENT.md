@@ -16,8 +16,12 @@ Mỗi người phụ trách 3 class diagram và 5 sequence như bảng task assi
 - **Tráng → Nam:** thanh toán cập nhật `clinical_order.payment_status='PAID'`; kỹ thuật viên được duyệt kết quả sau đó.
 - **Nam → Khánh:** đóng bệnh án đặt `closed_at`; Feedback kiểm tra cùng bệnh nhân, trạng thái CLOSED, thời hạn 7 ngày và ràng buộc UNIQUE(record_id).
 - **Khánh → cả nhóm:** `AuthUser` chứa userId và role trong HttpSession; tất cả POST gửi CSRF. Không tin doctorId/patientId từ form khi đó là thông tin người đang đăng nhập.
-- **Cả nhóm:** thay đổi schema phải thêm migration mới và thông báo cho nhóm; không chỉnh script seed rồi nhập lại vào database đã có dữ liệu. File `.env`/`application-local.properties` không commit.
+- **Cả nhóm:** chỉ có một file database/hospital.sql; khi thay đổi cấu trúc phải thống nhất trong nhóm, không tự nạp lại vào database đã có dữ liệu. File `.env`/`application-local.properties` không commit.
 
 ## Chia nhánh Git khi bắt đầu dùng repository
 
 Tên nhánh nên theo chức năng: `feature/auth-search-feedback`, `feature/appointments-billing`, `feature/schedules-queue`, `feature/clinical-reporting`. Tên người chỉ dùng trong bảng phân công; không đưa vào tên lớp, script, database hoặc tài khoản demo.
+
+## Cách demo liền mạch
+
+Khánh đăng nhập/tìm kiếm; Tráng đặt lịch và giới thiệu danh mục; Kiên tiếp nhận/gọi vào khám, trình bày lịch và duyệt nghỉ; Nam khám/chỉ định/kê đơn/báo cáo. Đến bước thu phí Tráng tiếp nhận thao tác, rồi bàn giao lại Nam. Kết thúc Khánh trình bày đánh giá. Dùng cùng mã lịch/queueId/recordId như DEMO_MAIN_FLOW.md.

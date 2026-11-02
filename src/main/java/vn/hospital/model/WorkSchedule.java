@@ -14,6 +14,12 @@ public class WorkSchedule {
   private Integer maxSlots;
   private Integer bookedCount;
   private String status;
+  private String leaveStatus;
+  private String leaveReason;
+  private java.time.LocalDateTime leaveRequestedAt;
+  private Integer leaveReviewedBy;
+  private java.time.LocalDateTime leaveReviewedAt;
+  private String leaveReviewNote;
 
   public WorkSchedule() {}
 
@@ -87,5 +93,53 @@ public class WorkSchedule {
 
   public void setStatus(String value) {
     this.status = value;
+  }
+
+  public String getLeaveStatus() {
+    return leaveStatus;
+  }
+
+  public void setLeaveStatus(String value) {
+    leaveStatus = value;
+  }
+
+  public String getLeaveReason() {
+    return leaveReason;
+  }
+
+  public void setLeaveReason(String value) {
+    leaveReason = value;
+  }
+
+  public java.time.LocalDateTime getLeaveRequestedAt() {
+    return leaveRequestedAt;
+  }
+
+  public void setLeaveRequestedAt(java.time.LocalDateTime value) {
+    leaveRequestedAt = value;
+  }
+
+  public Integer getLeaveReviewedBy() {
+    return leaveReviewedBy;
+  }
+
+  public void setLeaveReviewedBy(Integer value) {
+    leaveReviewedBy = value;
+  }
+
+  public java.time.LocalDateTime getLeaveReviewedAt() {
+    return leaveReviewedAt;
+  }
+
+  public void setLeaveReviewedAt(java.time.LocalDateTime value) {
+    leaveReviewedAt = value;
+  }
+
+  public String getLeaveReviewNote() {
+    return leaveReviewNote;
+  }
+
+  public void setLeaveReviewNote(String value) {
+    leaveReviewNote = value;
   }
 }

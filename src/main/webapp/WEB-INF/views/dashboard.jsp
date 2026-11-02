@@ -39,6 +39,7 @@
 </a>
 </c:if>
 <c:if test="${role=='MANAGER' || role=='ADMIN'}">
+<a class="card action-card" href="${ctx}/schedules"><span class="action-icon">03</span><h2>Lịch bác sĩ và duyệt nghỉ</h2><p>Xem ca và xét duyệt yêu cầu nghỉ của bác sĩ.</p></a>
 <a class="card action-card" href="${ctx}/reports">
 <span class="action-icon">01</span>
 <h2>Báo cáo & phân tích</h2>

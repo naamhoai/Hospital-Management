@@ -10,12 +10,21 @@ public class AppointmentService {
   private final ScheduleDAO schedules = new ScheduleDAO();
   private final AppointmentDAO appointments = new AppointmentDAO();
 
-  /** Khóa bệnh nhân và ca khám trong cùng transaction để không đặt vượt số chỗ. */
+  /**
+   * SQ06 - Bệnh nhân đặt lịch từ appointments.jsp. Đầu vào: patientId lấy từ phiên, scheduleId và
+   * triệu chứng ban đầu. Khóa bệnh nhân/ca, kiểm tra giới hạn 2 lịch chưa hoàn tất và tìm giờ còn
+   * trống. Đầu ra: appointmentId mới, tăng booked_count và lưu thông báo; lỗi hoàn tác tất cả.
+   */
   public long createAppointment(long patient, long schedule, String symptoms) {
     return Database.tx(connection -> book(connection, patient, schedule, symptoms, true));
   }
 
-  /** Dùng chung cho đặt online và khách đến trực tiếp; giá khám được chụp tại lúc đặt. */
+  /**
+   * Đặt lịch dùng chung cho online và khách đến trực tiếp. online=true áp dụng giới hạn đặt online;
+   * lễ tân dùng false nhưng vẫn kiểm tra ca/giờ/sức chứa. Connection được truyền từ transaction bên
+   * ngoài để walk-in và cấp số cùng thành công. Giá khám được chụp lúc đặt, không thay theo các lần
+   * sửa danh mục sau này.
+   */
   public long book(
       Connection connection, long patient, long schedule, String symptoms, boolean online)
       throws SQLException {
@@ -86,7 +95,11 @@ public class AppointmentService {
     throw new BusinessException("Không còn giờ khám phù hợp trong ca này.");
   }
 
-  /** Đổi ca và cập nhật số chỗ hai ca cùng lúc; lỗi sẽ hoàn tác toàn bộ. */
+  /**
+   * SQ07 - Đổi lịch khám. Đầu vào: bệnh nhân đang đăng nhập, mã lịch cũ và mã ca mới. Kiểm tra đúng
+   * chủ lịch, trạng thái BOOKED, tối đa 2 lần và trước ca 12 giờ. Đầu ra: cập nhật ngày/giờ/bác sĩ,
+   * trả chỗ ca cũ và nhận chỗ ca mới cùng transaction.
+   */
   public void rescheduleAppointment(long patient, long appointment, long target) {
     Database.tx(
         connection -> {
@@ -135,7 +148,11 @@ public class AppointmentService {
         });
   }
 
-  /** Hủy lịch thuộc bệnh nhân, trả lại số chỗ và kiểm tra giới hạn hủy trong tháng. */
+  /**
+   * SQ08 - Hủy lịch do bệnh nhân yêu cầu. Đầu vào: patientId từ phiên và appointmentId. Chỉ hủy
+   * lịch BOOKED của chính người đó. Đầu ra: CANCELLED, trả số chỗ cho ca và tạo thông báo. Hủy
+   * nhiều lần tạm khóa đặt online.
+   */
   public void cancelAppointment(long patient, long appointment) {
     Database.tx(
         connection -> {

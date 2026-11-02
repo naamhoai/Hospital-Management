@@ -10,7 +10,11 @@ public class AuthService {
   private final UserDAO users = new UserDAO();
   private static final String DUMMY = Passwords.hash("non-user-password");
 
-  /** Xác minh tài khoản, đếm lần sai và chỉ tạo dữ liệu phiên sau khi mật khẩu hợp lệ. */
+  /**
+   * SQ01 - Đăng nhập. Đầu vào: email và mật khẩu từ form. Đọc users/roles, kiểm tra mật khẩu băm,
+   * trạng thái và số lần sai. Đầu ra: AuthUser gồm userId/họ tên/vai trò để Controller lưu vào
+   * HttpSession. Sai thông tin ném BusinessException; không trả mật khẩu ra JSP.
+   */
   public AuthUser login(String email, String password) {
     String login = Checks.text(email, 100, "Email").toLowerCase();
     AuthUser result =

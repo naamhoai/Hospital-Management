@@ -118,6 +118,7 @@
 <c:if test="${record.status=='OPEN'}">
 <div class="card" id="clinical">
 <h2>Chỉ định xét nghiệm / dịch vụ</h2>
+<p class="muted">Gói khám đã bao gồm các dịch vụ thành phần; không chọn lặp dịch vụ lẻ có trong gói.</p>
 <form method="post" action="${ctx}/clinical-orders">
 <input type="hidden" name="csrf" value="${sessionScope.csrf}">
 <input type="hidden" name="recordId" value="${record.recordId}">

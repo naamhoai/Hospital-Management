@@ -10,6 +10,12 @@ import vn.hospital.model.MedicalRecord;
 import vn.hospital.util.*;
 
 public class BillingService {
+  /**
+   * SQ10 - Lập hóa đơn. Đầu vào: nhân viên thu ngân và recordId. Đọc phí khám, chỉ định và đơn
+   * thuốc chưa lên hóa đơn. Dùng giá đã chụp tại lúc phát sinh, không lấy lại đơn giá mới trong
+   * danh mục. Đầu ra: invoiceId với invoice_line/tổng tiền; không thu lại dòng phí đã được tính ở
+   * đợt trước.
+   */
   public long createInvoice(AuthUser cashier, long record) {
     Actors.require(cashier, "CASHIER", "ADMIN");
     return Database.tx(
@@ -59,7 +65,11 @@ public class BillingService {
     return invoice;
   }
 
-  /** Thu tiền mặt khi hóa đơn còn mở và không có giao dịch VNPay đang giữ số tiền. */
+  /**
+   * SQ10/WF01 - Xác nhận thu tiền mặt. Đầu vào: thu ngân của phiên và invoiceId. Chặn hóa đơn đã
+   * trả hoặc đang có giao dịch VNPay. Đầu ra: hóa đơn PAID, các chỉ định/đơn thuộc hóa đơn được
+   * đánh dấu PAID và lưu thông báo. Chỉ sau bước này Lab mới được duyệt kết quả.
+   */
   public void processCashPayment(AuthUser cashier, long invoice) {
     Actors.require(cashier, "CASHIER", "ADMIN");
     Database.tx(
@@ -76,7 +86,11 @@ public class BillingService {
         });
   }
 
-  /** Đánh dấu hóa đơn đã trả và mở quyền làm xét nghiệm trong cùng transaction. */
+  /**
+   * SQ10 - Cập nhật kết quả thu tiền đã được xác nhận. Nhận Connection của transaction, invoiceId,
+   * phương thức, mã giao dịch và người xử lý. Đánh dấu hóa đơn và đúng các nguồn chi phí thuộc hóa
+   * đơn đó, tránh đánh dấu nhầm toàn bệnh án.
+   */
   public static void completePayment(
       Connection connection, long invoice, String method, String transaction, Long actor)
       throws SQLException {

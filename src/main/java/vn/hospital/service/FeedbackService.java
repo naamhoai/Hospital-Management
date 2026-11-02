@@ -8,7 +8,11 @@ import vn.hospital.dao.FeedbackDAO;
 import vn.hospital.util.*;
 
 public class FeedbackService {
-  /** Chỉ bệnh nhân của lượt khám đã đóng mới được đánh giá một lần trong 7 ngày. */
+  /**
+   * SQ05 - Đánh giá lượt khám. Đầu vào: patientId của phiên, recordId, điểm 1-5 và nhận xét. Chỉ
+   * nhận bệnh án của chính bệnh nhân, đã CLOSED, trong 7 ngày và chưa có đánh giá. Đầu ra: ghi
+   * feedback và tính lại điểm trung bình doctors trong cùng transaction.
+   */
   public void submitFeedback(long patient, long record, int rating, String comment) {
     Checks.require(rating >= 1 && rating <= 5, "Số sao phải từ 1 đến 5.");
     Checks.require(comment.length() <= 2000, "Nhận xét tối đa 2000 ký tự.");

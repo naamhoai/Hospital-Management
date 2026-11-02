@@ -8,7 +8,8 @@ public final class Config {
   static {
     for (String file : new String[] {"application.properties", "application-local.properties"}) {
       try (var in = Config.class.getClassLoader().getResourceAsStream(file)) {
-        if (in != null) VALUES.load(in);
+        if (in != null)
+          VALUES.load(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
       } catch (Exception e) {
         throw new IllegalStateException("Cannot load configuration", e);
       }

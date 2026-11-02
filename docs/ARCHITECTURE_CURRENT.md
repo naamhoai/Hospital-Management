@@ -33,12 +33,10 @@ Tổng 15 quan hệ tham chiếu trực tiếp giữa 8 Java package. Sơ đồ 
 
 Các thành phần cũ React, React Bootstrap, ApiController và FrontendResponse đã được thay bằng cấu trúc JSP/Servlet hiện có. Không sửa class/sequence nghiệp vụ trong lần cập nhật này.
 
-## File tổng hợp các sơ đồ — 02/11/2026
+## Bản demo chạy local — 03/11/2026
 
-Mở `E:/SWD392/DESIGN/Hospital_All_Diagrams.vpp`. Project có 16 sơ đồ native: 1 Software Architecture, 1 Package Diagram, 3 class CD10–CD12, 2 class overview Medical & EMR / Analytics & Reports, 5 sequence SQ16–SQ20 và 4 activity workflow WF01–WF04. Tất cả hình, chữ, thuộc tính và connector có thể sửa trong Visual Paradigm. Hai class overview được đặt tiền tố `Overview` để phân biệt với class chi tiết.
+LocalServer ở package gốc vn.hospital chỉ khởi động Tomcat 10.1 trên localhost:3000 và kiểm tra kết nối DB trước khi mở web. Không đặt server trong src/test và không cần chạy bộ bài test.
 
-WF01 bổ sung kiểm tra lại slot, chẩn đoán sơ bộ trước chỉ định, thu phí trước xét nghiệm và chỉ thu khoản chưa lập hóa đơn khi hoàn tất. WF02 giữ Manager duyệt nghỉ theo SRS. WF03 sửa lane xử lý lỗi; WF04 đủ flow/revenue, dữ liệu rỗng và tùy chọn xuất PDF/XLSX. Các nhánh nhập lại có merge; điều kiện ra quyết định có guard.
+Mọi CREATE/INSERT nằm trong database/hospital.sql, database tên hospital_demo. File cấu hình riêng lấy từ application-local.properties.example. UI dùng JSP/HTML/CSS/JavaScript thuần. Có lịch lặp tuần/tháng, Manager duyệt nghỉ và gói dịch vụ; phần này dùng cùng Service/DAO và không đổi ranh giới các tầng.
 
-Đã kiểm tra bộ đọc/xuất ảnh Visual Paradigm với toàn bộ 16 sơ đồ, kiểm tra bảo toàn ID/model/shape của cả 3 project nguồn, kiểm tra đường đi start/end và bậc vào/ra của 4 activity. Bốn PNG WF01–WF04 cùng thư mục dùng để thay ảnh workflow trong báo cáo.
-
-Lần này chỉnh 4 workflow và gom project; giữ nguyên nội dung nghiệp vụ của các class/sequence cũ. Không sửa Java/JSP/database hoặc Google Docs. Các khoảng thiếu code về lịch lặp, phiếu xin nghỉ/Manager duyệt và gói khám vẫn còn; được ghi trong Documentation của WF02/WF03 và `CODE_DIAGRAM_REVIEW.md`. Việc gom file không có nghĩa mọi class/sequence đã khớp code 100%.
+Các hình class/sequence cũ cần thể hiện thêm reviewLeave, lịch lặp và quan hệ thành phần gói khi cập nhật báo cáo. Mapping hàm chạy thực tế và dữ liệu vào/ra nằm trong WORKFLOW_CODE_GUIDE.md; không dùng ghi chú thiếu chức năng của bản cũ để đánh giá bản hiện tại.

@@ -1,61 +1,56 @@
-# Dữ liệu và luồng demo
+# Kịch bản demo bốn workflow
 
-## Tài khoản chung
+Nạp duy nhất `database/hospital.sql`, cấu hình MySQL theo README rồi chạy `scripts/run-dev.ps1`. Mật khẩu web dùng chung: `Demo@1234`.
 
-Các tài khoản demo dùng mật khẩu `Demo@1234`.
+## WF01 — Đặt lịch, khám và thanh toán liền mạch
 
-| Vai trò | Email |
+1. **Bệnh nhân `patient@hospital.test`:** tìm bác sĩ An, chọn ca **hôm nay còn giờ**, đặt lịch. Ghi lại mã AP vừa tạo; có thể thấy trong “Lịch khám của tôi”.
+2. **Lễ tân `reception@hospital.test`:** vào Tiếp nhận, tìm đúng mã AP, check-in. Hệ thống cấp số chờ/phòng; không tự tạo bệnh án tại quầy.
+3. **Bác sĩ `doctor@hospital.test`:** vào Hàng đợi, gọi người tiếp theo. Hệ thống mở bệnh án nháp và chuyển đến EMR bằng queueId.
+4. Lưu triệu chứng, ICD **J00**, chẩn đoán và ghi chú. Sau đó chọn một xét nghiệm hoặc **gói kiểm tra cơ bản**. Gói tạo các chỉ định thành phần với tổng giá đúng giá gói.
+5. **Thu ngân `cashier@hospital.test`:** chọn đúng bệnh án, lập hóa đơn và thu tiền mặt lần 1. Có phí khám và xét nghiệm; chỉ những chỉ định thuộc hóa đơn đã PAID mới được làm.
+6. **Kỹ thuật viên `lab@hospital.test`:** tìm đúng chỉ định/bệnh nhân vừa tạo, nhập nội dung và duyệt từng kết quả. Không chọn nhầm chỉ định mẫu của bác sĩ Bình.
+7. **Bác sĩ:** mở lại EMR, xem đủ kết quả, kê thuốc theo danh mục minh họa rồi kết thúc. Kho chỉ trừ khi phát hành đơn. Đóng bệnh án tự lập hóa đơn cho phí mới chưa tính.
+8. **Thu ngân:** thu khoản còn lại. Phí khám/xét nghiệm đã thu không được cộng lần nữa.
+9. **Bệnh nhân:** xem hồ sơ, kết quả, đơn và hóa đơn; gửi đánh giá. **Quản lý** xem báo cáo phát sinh.
+
+Nếu không cần xét nghiệm, bỏ chỉ định và đi tiếp kê đơn/kết thúc. Không kê đơn khi vẫn còn chỉ định chưa hoàn tất. Hết giờ hôm nay thì bác sĩ tạo thêm ca còn giờ hoặc trình bày bằng lượt đã được tiếp nhận sẵn.
+
+## WF02 — Lịch bác sĩ và xin nghỉ
+
+- Bác sĩ mở **Lịch bác sĩ**, tạo ca chưa trùng, chọn một ngày hoặc lặp tuần/tháng tới ngày kết thúc.
+- Danh sách hiện mã ca, ngày/giờ, số người đã đặt và trạng thái.
+- Gửi yêu cầu nghỉ cho một ca chưa tiếp nhận; nhập lý do. Trạng thái chuyển “Chờ quản lý duyệt”, lịch hẹn vẫn được giữ.
+- Đăng nhập **manager**, mở cùng màn hình, từ chối hoặc đồng ý kèm ghi chú.
+- Từ chối giữ ca/lịch hẹn. Đồng ý khóa ca, hủy lịch BOOKED liên quan và tạo thông báo đặt lại. Ca đã tiếp nhận không cho hủy.
+
+## WF03 — Danh mục dịch vụ, gói và giá
+
+- Quản lý mở **Danh mục dịch vụ**, thêm/sửa mã dịch vụ, khoa, mô tả, giá, loại và trạng thái.
+- Với loại **Gói khám**, chọn ít nhất hai thành phần LAB/IMAGING; không lồng một gói trong gói khác.
+- Gói có giá riêng. Khi bác sĩ chọn gói, hệ thống phân bổ giá vào các chỉ định thành phần; tổng vẫn đúng giá gói.
+- Đổi giá sau khi đã tạo chỉ định không đổi chi phí của chỉ định cũ. Chuyển INACTIVE để ngừng chọn cho lượt khám mới.
+
+## WF04 — Báo cáo
+
+- Quản lý mở **Báo cáo**, chọn lượt khám hoặc doanh thu.
+- Chọn ngày/khoa/dịch vụ/phương thức và cách nhóm DAY/MONTH/QUARTER.
+- Xem chỉ số, bảng và biểu đồ cột CSS. Dữ liệu rỗng hiển thị hợp lệ; ngày bắt đầu sau ngày kết thúc báo lỗi.
+- Có thể xuất PDF/XLSX. Hóa đơn UNPAID không cộng vào doanh thu.
+
+## Dữ liệu có sẵn trong một file SQL
+
+| Tài khoản | Dùng để trình bày |
 |---|---|
-| Bệnh nhân | `patient@hospital.test`, `patient2@hospital.test`, `patient3@hospital.test` |
-| Bác sĩ | `doctor@hospital.test`, `doctor2@hospital.test` |
-| Lễ tân | `reception@hospital.test` |
-| Kỹ thuật viên | `lab@hospital.test` |
-| Thu ngân | `cashier@hospital.test` |
-| Quản lý | `manager@hospital.test` |
-| Trưởng khoa | `head@hospital.test` |
-| Quản trị | `admin@hospital.test` |
+| patient / doctor | Cặp chính để bắt đầu lượt khám mới |
+| patient2 | Lịch BOOKED vào ngày nạp SQL, tiếp nhận được ngay trong ngày đó |
+| patient3 | Bệnh nhân dự phòng; có thể đặt lượt mới nếu lượt trước đã hoàn tất |
+| patient4 / doctor2 | Lượt đang khám, xét nghiệm đã trả tiền, chờ Lab nhập kết quả |
+| patient5 | Hồ sơ lịch sử đã trả tiền và có kết quả/đơn |
+| patient6 | Lượt đã hoàn tất nhưng hóa đơn còn UNPAID |
+| patient7 / patient8 | Lịch sử hủy/vắng để báo cáo có số liệu |
+| patient9 | Lịch ngày sau ngày nạp SQL, dùng trình bày đổi lịch |
 
-## Bộ dữ liệu phòng khám
+Lịch mẫu tính theo ngày nạp SQL. Không cần nạp lại file mỗi ngày: bác sĩ có thể tạo ca mới và bệnh nhân đặt lượt mới ngay trên web.
 
-Nạp `database/04-demo-data.sql` sau 01/02. Bốn bộ độc lập mang mã phòng khám, không mang tên thành viên:
-
-| Phòng | Bác sĩ | Bệnh nhân |
-|---|---|---|
-| DEMO-CLINIC01 | `clinic01.doctor@hospital.test` | `clinic0101` đến `clinic0109` + `@hospital.test` |
-| DEMO-CLINIC02 | `clinic02.doctor@hospital.test` | `clinic0201` đến `clinic0209` + `@hospital.test` |
-| DEMO-CLINIC03 | `clinic03.doctor@hospital.test` | `clinic0301` đến `clinic0309` + `@hospital.test` |
-| DEMO-CLINIC04 | `clinic04.doctor@hospital.test` | `clinic0401` đến `clinic0409` + `@hospital.test` |
-
-Trong từng bộ: 01/04 là bệnh nhân để đặt lịch mới; 02 có lịch hôm nay; 03 có lịch sau hai ngày; 05 đang chờ; 06 đang khám và có chỉ định đã trả phí; 07 hoàn tất hôm nay; 08 có lịch sử; 09 còn khoản tiền thuốc chưa trả. Script cũng giữ bộ bác sĩ/bệnh nhân nền và hai bác sĩ demo chung.
-
-Script tạo ca từ ngày nạp đến 8 ngày sau. Nạp lại cùng ngày bỏ qua ca đã có, không đưa ca đã khám về trạng thái cũ, không thu tiền hoặc trừ kho lần hai. Ngày khác tạo bộ lượt khám mới. Không xóa volume/data để cập nhật dữ liệu.
-
-## Đường đi cần demo và code tương ứng
-
-| Bước | Vai trò/màn hình | Controller → Service → DAO |
-|---|---|---|
-| Đăng nhập, tìm kiếm | Bệnh nhân `/login`, `/search` | AuthController → AuthService → UserDAO; SearchController → SearchService → SearchDAO |
-| Đặt/đổi/hủy lịch | Bệnh nhân `/appointments` | AppointmentController → AppointmentService → PatientDAO, ScheduleDAO, AppointmentDAO |
-| Tạo ca, điều chỉnh ca | Bác sĩ `/schedules` | ScheduleController → ScheduleService → ScheduleDAO |
-| Tiếp nhận | Lễ tân `/reception` | ReceptionController → ReceptionService → QueueService → AppointmentDAO, QueueDAO |
-| Gọi vào khám | Bác sĩ `/queue` | QueueController → QueueService.callNext → QueueDAO, MedicalRecordDAO |
-| Chẩn đoán | Bác sĩ `/emr?queueId=...` | EMRController → EMRService → QueueContextPort, MedicalRecordDAO |
-| Chỉ định | Bác sĩ trong EMR | ClinicalOrderController → ClinicalService → ClinicalOrderDAO, MedicalServiceDAO |
-| Thu phí | Thu ngân `/billing` | BillingController → BillingService → InvoiceDAO, ClinicalOrderDAO, PrescriptionDAO |
-| Nhập/duyệt kết quả | Kỹ thuật viên `/lab` | LabResultController → ClinicalService → TestResultDAO, ClinicalOrderDAO |
-| Kê đơn/kết thúc | Bác sĩ trong EMR | PrescriptionController → PrescriptionService → MedicationDAO, PrescriptionDAO; EMRService.closeRecord |
-| Hồ sơ/đánh giá | Bệnh nhân `/my-records`, `/feedback` | PatientRecordController/Service; FeedbackController → FeedbackService → FeedbackDAO |
-| Danh mục, báo cáo | Quản lý `/services`, `/reports` | ServiceCatalogController → ServiceCatalogService → MedicalServiceDAO; ReportController → AnalyticsService → ReportDAO |
-
-Dùng cùng một bệnh nhân để đi liên tục: tìm và đặt lịch còn giờ hôm nay → lễ tân check-in → bác sĩ gọi tiếp theo. Bác sĩ chỉ được có một bệnh nhân đang khám, nên hoàn tất ca đang mở trước khi gọi người tiếp theo. Không chọn bệnh nhân ở bộ 06 đang khám sẵn nếu muốn demo từ đầu.
-
-## Điều kiện quan trọng
-
-- Không đặt được giờ đã qua hoặc ca hết chỗ; check-in chỉ cho ngày hẹn hôm nay.
-- Lưu chẩn đoán trước khi chỉ định. Thu phí trước khi kỹ thuật viên duyệt kết quả.
-- Chưa đủ kết quả thì không phát hành đơn thuốc; thiếu tồn kho phải hoàn tác cả đơn.
-- Kết thúc khám chỉ cộng các phí mới chưa lập hóa đơn. Không mặc định CLOSED là đã PAID.
-- Chỉ bệnh nhân của lượt khám đã đóng được đánh giá, một lần trong 7 ngày.
-- Báo cáo doanh thu chỉ lấy PAID; bộ lọc sai bị từ chối, dữ liệu rỗng vẫn là báo cáo hợp lệ.
-
-Quy trình phụ: thu hồi kết quả tại `/result-recalls`, cần trưởng khoa đúng khoa và biên bản PDF. Bộ test HTTP cho quy trình này là `scripts/smoke_result_recalls.py`.
+Mỗi vai trò dùng email `tên@hospital.test` theo bảng README. Nếu đổi người trình bày, giao tiếp bằng **mã lịch → queueId → recordId → invoiceId**; không lấy tùy ý mã từ bệnh nhân khác.

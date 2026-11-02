@@ -40,7 +40,7 @@
 <a href="${ctx}/my-records">Hồ sơ & hóa đơn</a>
 <a href="${ctx}/feedback">Đánh giá</a>
 </c:if>
-<c:if test="${role=='DOCTOR' || role=='ADMIN'}">
+<c:if test="${role=='DOCTOR' || role=='ADMIN' || role=='MANAGER'}">
 <a href="${ctx}/schedules">Ca làm việc</a>
 </c:if>
 <c:if test="${role=='RECEPTIONIST' || role=='ADMIN'}">

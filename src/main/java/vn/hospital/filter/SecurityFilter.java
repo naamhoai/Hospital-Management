@@ -16,7 +16,7 @@ public class SecurityFilter implements Filter {
           Map.entry("/feedback", Set.of("PATIENT")),
           Map.entry("/services", Set.of("ADMIN", "MANAGER")),
           Map.entry("/billing", Set.of("CASHIER", "ADMIN")),
-          Map.entry("/schedules", Set.of("DOCTOR", "ADMIN")),
+          Map.entry("/schedules", Set.of("DOCTOR", "ADMIN", "MANAGER")),
           Map.entry("/reception", Set.of("RECEPTIONIST", "ADMIN")),
           Map.entry("/queue", Set.of("RECEPTIONIST", "DOCTOR", "ADMIN")),
           Map.entry("/emr", Set.of("DOCTOR")),

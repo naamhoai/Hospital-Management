@@ -34,6 +34,7 @@
 <option value="CONSULTATION">Khám bệnh</option>
 <option value="LAB">Xét nghiệm</option>
 <option value="IMAGING">Chẩn đoán hình ảnh</option>
+<option value="PACKAGE">Gói khám</option>
 </select>
 </div>
 <div>
@@ -47,8 +48,11 @@
 <option value="INACTIVE">Ngừng hoạt động</option>
 </select>
 </div>
-<button>Lưu dịch vụ</button>
 </div>
+<label>Mô tả</label><textarea name="description" maxlength="500"></textarea>
+<fieldset><legend>Thành phần (chỉ chọn khi tạo/sửa gói khám)</legend>
+<c:forEach items="${componentOptions}" var="component"><label class="inline"><input type="checkbox" name="componentId" value="${component.serviceId}"> <c:out value="${component.name}"/></label></c:forEach>
+</fieldset><p><button>Lưu dịch vụ / gói khám</button></p>
 </form>
 </div>
 <%@ include file="_footer.jspf" %>
