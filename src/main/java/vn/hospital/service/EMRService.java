@@ -44,7 +44,7 @@ public class EMRService {
     Actors.require(actor, "DOCTOR");
     Checks.require(request != null, "Thiếu dữ liệu chẩn đoán.");
     String symptoms = Checks.text(request.getSymptoms(), 5000, "Triệu chứng"),
-        code = Checks.text(request.getIcdCode(), 20, "Mã ICD"),
+        code = Checks.text(request.getIcdCode(), 20, "Mã ICD").toUpperCase(Locale.ROOT),
         diagnosis = Checks.text(request.getDiagnosis(), 255, "Chẩn đoán");
     String notes = request.getNotes() == null ? "" : request.getNotes().trim();
     Checks.require(notes.length() <= 5000, "Ghi chú tối đa 5000 ký tự.");
@@ -157,6 +157,7 @@ public class EMRService {
                       .filter(s -> !"CONSULTATION".equals(s.getCategory()))
                       .toList());
           page.put("medications", new MedicationDAO().searchApproved(connection, ""));
+          page.put("prescriptionRows", List.of(Map.of("medicationId", "", "quantity", "", "dosage", "")));
           if (queueId != null) {
             QueueContext queueContext = new QueueContextPort().getContext(connection, queueId);
             Checks.require(
@@ -173,10 +174,16 @@ public class EMRService {
             var orders = new ClinicalOrderDAO().findByRecordId(connection, record.getRecordId());
             page.put("orders", orders);
             page.put("clinicalProgress", ClinicalProgress.from(record, orders));
-            page.put(
-                "hasPendingTests",
-                orders.stream()
-                    .anyMatch(o -> !Set.of("COMPLETED", "CANCELLED").contains(o.getStatus())));
+            // Chỉ hướng dẫn từ dữ liệu đã lưu, không tự xác nhận thanh toán/kết quả thay vai trò khác.
+            var pendingOrders = orders.stream()
+                .filter(o -> !Set.of("COMPLETED", "CANCELLED").contains(o.getStatus()))
+                .toList();
+            boolean hasDiagnosis = record.getDiagnosis() != null && !record.getDiagnosis().isBlank();
+            page.put("hasDiagnosis", hasDiagnosis);
+            page.put("hasPendingTests", !pendingOrders.isEmpty());
+            page.put("pendingOrders", pendingOrders);
+            page.put("hasUnpaidTests", pendingOrders.stream()
+                .anyMatch(o -> !"PAID".equals(o.getPaymentStatus())));
             page.put(
                 "prescriptions",
                 new PrescriptionDAO().findByRecordId(connection, record.getRecordId()));
