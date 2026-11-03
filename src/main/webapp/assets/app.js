@@ -3,35 +3,6 @@ document.addEventListener('submit', function(e) {
   if (message && !window.confirm(message)) e.preventDefault();
 });
 
-// Lọc thuốc ngay trên trang để không tải lại và làm mất chẩn đoán/đơn thuốc đang nhập.
-const medicationSearch = document.querySelector('[data-med-search]');
-if (medicationSearch) {
-  const keywordInput = medicationSearch.querySelector('[name="medicationKeyword"]');
-  const normalize = value => value.toLocaleLowerCase('vi').normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-  const filterMedication = function() {
-    const keyword = normalize(keywordInput.value.trim());
-    const options = Array.from(document.querySelector('#med-template').content.querySelectorAll('option[value]:not([value=""])'));
-    const matches = options.filter(option => normalize(option.textContent + ' ' + (option.dataset.ingredient || '')).includes(keyword));
-    document.querySelectorAll('#med-items select[name="medicationId"]').forEach(select => {
-      Array.from(select.options).forEach(option => {
-        // Giữ thuốc đã chọn để tìm thuốc khác không vô tình đổi dòng đã nhập.
-        option.hidden = !!option.value && !option.selected
-          && !normalize(option.textContent + ' ' + (option.dataset.ingredient || '')).includes(keyword);
-      });
-    });
-    document.querySelector('#med-search-message').textContent = keyword
-      ? (matches.length ? 'Tìm thấy ' + matches.length + ' thuốc. Mở ô Chọn thuốc để chọn.' : 'Không tìm thấy thuốc phù hợp. Thử tên hoặc hoạt chất khác.')
-      : '';
-  };
-  medicationSearch.addEventListener('submit', function(event) {
-    event.preventDefault();
-    filterMedication();
-  });
-  keywordInput.addEventListener('input', filterMedication);
-  document.querySelector('[data-add-med]').addEventListener('click', () => window.setTimeout(filterMedication, 0));
-}
-
 // Thêm/xóa một dòng thuốc trên form; server vẫn kiểm tra lại trước khi lưu đơn.
 document.addEventListener('click', function(e) {
   if (e.target.matches('[data-print]')) window.print();

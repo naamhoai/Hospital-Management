@@ -16,16 +16,6 @@ Nạp duy nhất `database/hospital.sql`, cấu hình MySQL theo README rồi ch
 
 Nếu không cần xét nghiệm, bỏ chỉ định và đi tiếp kê đơn/kết thúc. Không kê đơn khi vẫn còn chỉ định chưa hoàn tất. Hết giờ hôm nay thì bác sĩ tạo thêm ca còn giờ hoặc trình bày bằng lượt đã được tiếp nhận sẵn.
 
-### Nếu màn hình kê đơn đang bị khóa
-
-- **Chưa lưu chẩn đoán:** nhập triệu chứng, chọn ICD trong danh mục, nhập chẩn đoán và bấm Lưu chẩn đoán. Thông báo thành công xác nhận dữ liệu đã lưu; lỗi nhập liệu giữ nội dung để sửa.
-- **Chỉ định chưa trả tiền:** thu ngân mở đúng mã bệnh án, tạo hóa đơn và thu phí. Kỹ thuật viên chỉ được duyệt kết quả sau khi chỉ định đã thanh toán.
-- **Đã trả tiền nhưng chưa có kết quả:** kỹ thuật viên mở đúng chỉ định, nhập và duyệt từng kết quả. Một gói có nhiều chỉ định nên cần hoàn tất đủ các thành phần.
-- **Đã có đủ kết quả:** bác sĩ lưu phần đang nhập, bấm Tải lại trạng thái hoặc mở lại đúng bệnh án, đọc kết quả và cập nhật chẩn đoán nếu cần. Sau đó chọn thuốc, số lượng, liều dùng và phát hành đơn.
-- **Không thực hiện chỉ định:** chỉ được hủy khi chưa thanh toán; không sửa trực tiếp status trong database để bỏ qua luồng.
-
-Phần **Bước tiếp theo** trên EMR tự hướng dẫn theo dữ liệu đã lưu. Cảnh báo chưa tích hợp dược ngoài không khóa kê đơn. Tìm thuốc lọc ngay trên trang để giữ thông tin đang nhập; lỗi phát hành đơn hiện tại bệnh án và giữ các dòng thuốc, chưa tạo đơn hoặc trừ kho.
-
 ## WF02 — Lịch bác sĩ và xin nghỉ
 
 - Bác sĩ mở **Lịch bác sĩ**, tạo ca chưa trùng, chọn một ngày hoặc lặp tuần/tháng tới ngày kết thúc.

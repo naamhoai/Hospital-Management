@@ -44,9 +44,7 @@ public class EMRController extends BaseController {
                     param(request, "notes")));
         default -> throw new BusinessException("Thao tác không hợp lệ.");
       }
-      boolean closed = "close".equals(param(request, "action"));
-      redirect(request, response, "/emr?queueId=" + queue + (closed ? "" : "#diagnosis"),
-          closed ? "Đã kết thúc khám và lưu hồ sơ." : "Đã lưu triệu chứng, mã ICD và chẩn đoán vào bệnh án.");
+      redirect(request, response, "/emr?queueId=" + queue, "Đã cập nhật bệnh án.");
     } catch (BusinessException e) {
       response.setStatus(422);
       request.setAttribute("error", e.getMessage());

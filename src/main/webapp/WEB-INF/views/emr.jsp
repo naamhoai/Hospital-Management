@@ -67,28 +67,6 @@
 </div>
 <div><ui:status value="${record.status}"/><p class="muted">Tiến trình: <strong><c:out value="${clinicalProgress.label}"/></strong></p></div>
 </section>
-<div class="card no-print" aria-label="Hướng dẫn bước tiếp theo">
-<h2>Bước tiếp theo</h2>
-<c:choose>
-<c:when test="${record.status!='OPEN'}">
-<p>Đã kết thúc khám. Thu ngân kiểm tra khoản còn phải thu; bệnh nhân có thể xem hồ sơ sau khi hoàn tất.</p>
-</c:when>
-<c:when test="${!hasDiagnosis}">
-<p><strong>Bác sĩ:</strong> nhập triệu chứng, chọn mã ICD, nhập chẩn đoán rồi bấm <a href="#diagnosis">Lưu chẩn đoán</a>. Sau khi lưu mới tạo chỉ định hoặc phát hành đơn thuốc.</p>
-</c:when>
-<c:when test="${hasPendingTests}">
-<c:choose>
-<c:when test="${hasUnpaidTests}"><p><strong>Thu ngân:</strong> tạo hóa đơn cho bệnh án #${record.recordId} và thu phí các chỉ định chưa thanh toán. Sau đó <strong>kỹ thuật viên</strong> mở Kết quả xét nghiệm, nhập và duyệt từng kết quả.</p></c:when>
-<c:otherwise><p><strong>Kỹ thuật viên:</strong> mở Kết quả xét nghiệm, chọn chỉ định đã thanh toán, nhập và duyệt kết quả. Cần hoàn tất tất cả chỉ định còn chờ.</p></c:otherwise>
-</c:choose>
-<p><strong>Bác sĩ:</strong> sau khi có đủ kết quả, mở lại bệnh án, xem kết quả, cập nhật chẩn đoán nếu cần rồi kê đơn. Vẫn có thể lưu chẩn đoán trong lúc chờ.</p>
-<p><a href="#clinical-results">Xem các chỉ định đang chờ ↓</a> · <a href="${ctx}/emr?queueId=${queueContext.queueId}#medication">Tải lại trạng thái</a> (lưu chẩn đoán đang nhập trước khi tải lại).</p>
-</c:when>
-<c:otherwise>
-<p><strong>Bác sĩ:</strong> ${empty orders ? 'nếu cần xét nghiệm thì tạo chỉ định; nếu không, có thể kê đơn ngay.' : 'xem kết quả bên dưới, cập nhật và lưu chẩn đoán nếu cần, sau đó kê đơn.'} Kiểm tra đơn đã phát hành rồi bấm Kết thúc khám. Không bắt buộc kê thuốc nếu không có chỉ định điều trị bằng thuốc.</p>
-</c:otherwise>
-</c:choose>
-</div>
 <div class="workspace-tabs no-print">
 <a href="#diagnosis">Chẩn đoán</a>
 <a href="#clinical">Chỉ định & kết quả</a>
@@ -99,7 +77,7 @@
 <h2>Bệnh án #${record.recordId} · lượt khám ${queueContext.queueId}</h2>
 <c:choose>
 <c:when test="${record.status=='OPEN'}">
-<form method="post" action="${ctx}/emr#diagnosis">
+<form method="post">
 <input type="hidden" name="csrf" value="${sessionScope.csrf}">
 <input type="hidden" name="action" value="diagnosis">
 <input type="hidden" name="queueId" value="${queueContext.queueId}">
@@ -160,33 +138,27 @@
 <h2>Kê đơn thuốc điện tử</h2>
 <p class="muted">Sử dụng thuốc demo để kiểm tra phần mềm. Bác sĩ nhập liều, số lần trong ngày và thời gian dùng vào ô liều dùng.</p>
 <c:if test="${!pharmacyConfigured}">
-<p class="muted">Đơn thuốc được lưu trong hệ thống. Chưa tích hợp dịch vụ dược bên ngoài để kiểm tra tương tác tự động; thông báo này không khóa kê đơn.</p>
+<p class="notice warning">Chưa kết nối hệ thống dược để kiểm tra tương tác tự động. Bác sĩ cần kiểm tra thuốc trước khi phát hành.</p>
 </c:if>
-<form method="get" action="${ctx}/emr#medication" class="search-form" data-med-search><input type="hidden" name="queueId" value="${queueContext.queueId}"><input aria-label="Tìm thuốc theo tên hoặc hoạt chất" name="medicationKeyword" maxlength="100" value="<c:out value='${param.medicationKeyword}'/>" placeholder="Tên thuốc hoặc hoạt chất"><button class="secondary">Tìm thuốc</button></form>
-<p class="muted" id="med-search-message" role="status"></p>
-<c:if test="${!hasDiagnosis}"><div class="notice warning">Chưa lưu chẩn đoán. Nhập đủ thông tin ở phần Chẩn đoán và bấm Lưu chẩn đoán trước khi kê đơn.</div></c:if>
-<c:if test="${hasPendingTests}"><div class="notice warning">Chưa thể phát hành đơn vì còn chỉ định đang chờ. Làm theo phần Bước tiếp theo ở trên. Nếu không thực hiện, chỉ được hủy chỉ định chưa thanh toán.</div></c:if>
-<c:if test="${prescriptionSubmitted}"><p class="notice warning" role="alert"><c:out value="${error}"/> Các dòng thuốc chưa được lưu; hãy sửa và gửi lại.</p></c:if>
+<form method="get" action="${ctx}/emr#medication" class="search-form"><input type="hidden" name="queueId" value="${queueContext.queueId}"><input aria-label="Tìm thuốc theo tên hoặc hoạt chất" name="medicationKeyword" value="<c:out value='${param.medicationKeyword}'/>" placeholder="Tên thuốc hoặc hoạt chất"><button class="secondary">Tìm thuốc</button></form>
+<c:if test="${hasPendingTests}"><div class="notice warning">Đang chờ kết quả cận lâm sàng. Chỉ kê đơn khi có đủ kết quả hoặc đã hủy chỉ định không thực hiện.</div></c:if>
 <form method="post" action="${ctx}/prescriptions">
+<fieldset ${hasPendingTests?'disabled':''}>
 <input type="hidden" name="csrf" value="${sessionScope.csrf}">
 <input type="hidden" name="recordId" value="${record.recordId}">
-<input type="hidden" name="queueId" value="${queueContext.queueId}">
-<fieldset ${hasPendingTests || !hasDiagnosis?'disabled':''}>
 <div id="med-items">
-<c:forEach items="${prescriptionRows}" var="row">
 <div class="med-row">
 <select aria-label="Tên thuốc" name="medicationId" required>
 <option value="">Chọn thuốc</option>
 <c:forEach items="${medications}" var="med">
-<option value="${med.medicationId}" data-ingredient="<c:out value='${med.activeIngredient}'/>" ${row.medicationId==med.medicationId.toString()?'selected':''}>
+<option value="${med.medicationId}">
 <c:out value="${med.name}"/> · tồn ${med.stockQuantity}</option>
 </c:forEach>
 </select>
-<input aria-label="Số lượng thuốc" type="number" name="quantity" min="1" max="1000" placeholder="Số lượng" value="<c:out value='${row.quantity}'/>" required>
-<input aria-label="Liều dùng" name="dosage" maxlength="100" placeholder="Liều dùng" value="<c:out value='${row.dosage}'/>" required>
+<input aria-label="Số lượng thuốc" type="number" name="quantity" min="1" max="1000" placeholder="Số lượng" required>
+<input aria-label="Liều dùng" name="dosage" maxlength="100" placeholder="Liều dùng" required>
 <button type="button" class="secondary" data-remove-med>Xóa dòng</button>
 </div>
-</c:forEach>
 </div>
 <button type="button" class="secondary" data-add-med>+ Thêm thuốc</button>
 <c:if test="${pharmacyConfigured}">
@@ -194,7 +166,7 @@
 <input type="checkbox" name="overrideInteractions" value="true"> Tôi đã xem xét và chịu trách nhiệm về cảnh báo tương tác thuốc.</label>
 </c:if>
 <label for="emr-6-advice">Lời dặn</label>
-<input id="emr-6-advice" name="advice" maxlength="255" value="<c:out value='${prescriptionSubmitted ? param.advice : ""}'/>">
+<input id="emr-6-advice" name="advice" maxlength="255">
 <p>
 </p>
 <button>Phát hành đơn thuốc</button>
@@ -205,7 +177,7 @@
 <select aria-label="Tên thuốc" name="medicationId" required>
 <option value="">Chọn thuốc</option>
 <c:forEach items="${medications}" var="med">
-<option value="${med.medicationId}" data-ingredient="<c:out value='${med.activeIngredient}'/>">
+<option value="${med.medicationId}">
 <c:out value="${med.name}"/> · tồn ${med.stockQuantity}</option>
 </c:forEach>
 </select>
@@ -216,7 +188,7 @@
 </template>
 </div>
 </c:if>
-<div class="card" id="clinical-results">
+<div class="card">
 <h2>Chỉ định và kết quả xét nghiệm</h2>
 <c:if test="${empty orders}">
 <p class="empty-state">Chưa có chỉ định cho lượt khám này.</p>

@@ -50,18 +50,14 @@ public class MedicalRecordDAO {
   }
 
   public MedicalRecord save(Connection c, MedicalRecord record) throws SQLException {
-    // Lưu đủ dữ liệu UC khám bệnh; không ghi đè hồ sơ đã đóng hoặc thuộc bác sĩ khác.
-    int updated = Jdbc.update(
+    Jdbc.update(
         c,
-        "UPDATE medical_record SET symptoms=?,icd_code=?,diagnosis=?,notes=?"
-            + " WHERE record_id=? AND doctor_id=? AND status='OPEN'",
+        "UPDATE medical_record SET symptoms=?,icd_code=?,diagnosis=?,notes=? WHERE record_id=?",
         record.getSymptoms(),
         record.getIcdCode(),
         record.getDiagnosis(),
         record.getNotes(),
-        record.getRecordId(),
-        record.getDoctorId());
-    vn.hospital.util.Checks.require(updated == 1, "Không lưu được bệnh án. Hãy mở lại lượt khám đang thực hiện.");
+        record.getRecordId());
     return findById(c, record.getRecordId());
   }
 
