@@ -26,7 +26,7 @@ services:
       TZ: Asia/Ho_Chi_Minh
       VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
       VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
-    ports: ["127.0.0.1:3000:8080"]
+    ports: ["127.0.0.1:3000:3000"]
     depends_on:
       db: {condition: service_healthy}
 volumes:

@@ -18,7 +18,7 @@
     <dependency><groupId>com.mysql</groupId><artifactId>mysql-connector-j</artifactId><version>9.2.0</version></dependency>
     <dependency><groupId>org.eclipse.angus</groupId><artifactId>angus-mail</artifactId><version>2.0.3</version></dependency>
     <dependency><groupId>org.apache.pdfbox</groupId><artifactId>pdfbox</artifactId><version>2.0.32</version></dependency>
-    <!-- Dùng để mở Tomcat local; Tomcat cài riêng đã cung cấp các thư viện này. -->
+    <!-- Tomcat local dùng chung cho nhóm, mở bằng scripts/run-dev.ps1 trên cổng 3000. -->
     <dependency><groupId>org.apache.tomcat.embed</groupId><artifactId>tomcat-embed-jasper</artifactId><version>10.1.61</version><scope>provided</scope></dependency>
   </dependencies>
   <build>

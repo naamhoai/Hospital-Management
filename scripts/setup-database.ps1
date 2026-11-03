@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$DbHost = '127.0.0.1',
     [ValidateRange(1,65535)][int]$Port = 3306,
     [string]$User = 'root',

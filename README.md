@@ -4,6 +4,8 @@
 
 ## Người mới pull code: làm đúng 3 bước
 
+Địa chỉ chạy chung của cả nhóm là **http://localhost:3000/hospital/login**. LocalServer cố định cổng **3000** và context **/hospital**; Docker cũng dùng cổng 3000 bên trong và bên ngoài container.
+
 ### 1. Nạp đúng một file database
 
 Mở **`database/hospital.sql`** trong MySQL Workbench bằng **File → Open SQL Script**, rồi chọn **Query → Execute (All or Selection)** để chạy nguyên file.
@@ -13,7 +15,7 @@ File này đã có **CREATE DATABASE, CREATE TABLE và INSERT dữ liệu trình
 Có thể dùng PowerShell thay Workbench:
 
 ```powershell
-.\scripts\setup-database.ps1 -Port 3306 -User root
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-database.ps1 -Port 3306 -User root
 ```
 
 Đổi port/user theo kết nối MySQL trên máy bạn. Script sẽ hỏi mật khẩu MySQL, không sinh thêm file database.
@@ -35,22 +37,17 @@ APP_BASE_URL=http://localhost:3000/hospital
 
 Cấu hình chung của nhóm là **JDK 17 + Tomcat 10.1**. Cài JDK 17, Maven và MySQL; đặt `JAVA_HOME` tới thư mục JDK. JDK 21/25 cũng có thể build, nhưng Maven luôn xuất bytecode Java 17 nhờ `maven.compiler.release=17` trong `pom.xml`. Không sửa giá trị này theo JDK riêng của từng máy.
 
-Từ thư mục dự án, sau khi dừng server cũ:
+Mở Windows PowerShell hoặc terminal của IDE tại thư mục có `pom.xml`, sau khi dừng server cũ:
 
 ```powershell
-.\scripts\run-dev.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-dev.ps1
 ```
 
-Mở **http://localhost:3000/hospital/login**. Script build WAR rồi chạy Tomcat local; không cần cấu hình Tomcat trong IDE. Nếu dùng Maven trực tiếp:
-
-```powershell
-mvn clean package
-mvn exec:java
-```
+Mở **http://localhost:3000/hospital/login**. Script build WAR rồi chạy Tomcat local; không cần cấu hình Tomcat trong IDE. Lệnh trên dùng được với Windows PowerShell 5.1 mặc định; tùy chọn ExecutionPolicy chỉ áp dụng cho tiến trình chạy script này. Hai script được lưu UTF-8 có BOM để đọc đúng tiếng Việt.
 
 Dừng web bằng Ctrl+C. Script tự build sạch rồi chạy Tomcat **10.1.61** đi kèm Maven trên cổng 3000, không cần cài/configure Tomcat riêng. Chỉ chạy một server trên cổng 3000.
 
-Nếu chạy qua IDE/Tomcat cài riêng: chọn **JDK 17** cho Project/Maven và Java chạy Tomcat; dùng Tomcat **10.1**, không dùng Tomcat 9. Undeploy bản cũ qua IDE/Tomcat Manager rồi deploy **`target/hospital.war` vừa build**. IDE có thể giữ cấu hình JDK hoặc thư mục deploy riêng; pull code không tự đổi được các cấu hình đó.
+Trong IDE, mở terminal tại thư mục có `pom.xml` rồi chạy cùng script trên. Cấu hình chung của nhóm dùng Tomcat đi kèm Maven; hãy dừng các server/deployment cũ do IDE tạo trước khi chạy. Cấu hình server riêng được lưu ngoài Git nên pull code không tự gỡ hoặc đổi được deployment cũ trên máy từng người.
 
 Khi cập nhật code: `git pull` trên nhánh của nhóm, giữ cấu hình MySQL riêng của mình, dừng web và chạy lại `scripts/run-dev.ps1`. **Không nạp lại SQL nếu `hospital` đã có đầy đủ bảng**. Nếu trước đó dùng `hospital_demo`, bản cấu hình mới dùng `hospital`: nạp file SQL vào `hospital` chưa có bảng và đổi URL theo bước 2. Nếu `hospital` đã chứa bảng của phiên bản cũ, không nhập chồng file SQL; cần đối chiếu schema trước khi cập nhật để giữ dữ liệu.
 
@@ -94,15 +91,17 @@ SQL giữ 18 bảng nghiệp vụ của ERD và 8 bảng hỗ trợ triển khai
 ## Nếu chưa chạy được
 
 - **Không kết nối DB / Access denied:** MySQL phải đang chạy; so lại host, port, `DB_USER`, `DB_PASSWORD` với Workbench.
-- **UnsupportedClassVersionError / class file version 63 hoặc 69:** đang deploy file build Java 19/25 vào Java 17. Dừng/undeploy bản cũ, dùng `mvn clean package` của cấu hình mới rồi deploy lại WAR. Kiểm tra `java -version`, `mvn -version` và JDK của Tomcat trong IDE.
+- **UnsupportedClassVersionError / class file version 63 hoặc 69:** đang dùng file build Java 19/25 cũ. Dừng server cũ, kiểm tra `java -version` / `mvn -version`, rồi chạy `scripts/run-dev.ps1` để build sạch theo Java 17 và mở Tomcat cổng 3000.
 - **Unknown database / table / column:** kiểm tra đã nạp `database/hospital.sql` và URL trỏ đúng `hospital` và schema tương ứng với bản code mới.
+- **Database chưa sẵn sàng khi khởi động:** LocalServer kiểm tra tên `hospital`, đủ 26 bảng và các cột thay đổi giữa các phiên bản. Xem dòng nguyên nhân bên dưới để biết bảng/cột còn thiếu; không nhập chồng SQL lên dữ liệu cũ.
 - **Đã sửa URL nhưng vẫn báo database `hospital_demo`:** kiểm tra biến môi trường `DB_URL` của terminal/IDE/Tomcat; biến môi trường được ưu tiên hơn file properties. Sửa biến đó, build và khởi động lại server.
 - **Table already exists:** database đã có bảng; dừng nhập SQL. Nếu đã nạp đúng bản hiện tại thì chỉ cần cấu hình và chạy web. Nếu là schema cũ, cần đối chiếu trước khi cập nhật; không tự xóa dữ liệu.
-- **Cổng 3000 đang dùng:** dừng bản web cũ trước khi mở bản mới.
+- **Cổng 3000 đang dùng:** script dừng trước bước clean/build để giữ nguyên bản đang chạy. Dừng terminal/server cũ bằng Ctrl+C rồi chạy lại; cổng không tự đổi sang giá trị khác.
+- **Thiếu `target/hospital`:** chạy `scripts/run-dev.ps1` từ thư mục dự án. Script tạo WAR và thư mục web trước khi mở Tomcat; không chạy clean trong khi web đang hoạt động.
 - **Không nhận lịch / không gọi người tiếp theo:** chọn lịch đúng hôm nay; ca phải còn giờ/chỗ; bác sĩ hoàn tất ca đang khám trước khi gọi người khác. Có thể tạo thêm ca bằng màn hình Lịch bác sĩ.
 
 ## Phạm vi demo
 
 Dùng tiền mặt để đi hết luồng mà không cần tài khoản dịch vụ bên ngoài. VNPay/email/dược là tùy chọn, chỉ hoạt động khi được cấu hình; không báo giả đã thanh toán hoặc đã gửi ra ngoài. Bản này dùng HttpSession theo kiến trúc Servlet/JSP, không triển khai JWT/Redis. SMS/LIS thật, BHYT/hoàn tiền, QR và các quy tắc vận hành nâng cao không thuộc kịch bản demo cơ bản.
 
-Có thể chạy Docker bằng `docker compose up --build`: web vẫn ở localhost:3000, MySQL host port 3307. Docker chỉ tự nạp cùng file SQL khi volume mới; không xóa volume đang có dữ liệu để cập nhật code.
+Có thể chạy Docker bằng `docker compose up --build`: web vẫn ở localhost:3000/hospital, ánh xạ **3000:3000**, MySQL host port 3307. Chạy một cách tại một thời điểm (script hoặc Docker). Docker chỉ tự nạp cùng file SQL khi volume mới; không xóa volume đang có dữ liệu để cập nhật code.

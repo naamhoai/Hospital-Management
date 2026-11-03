@@ -35,7 +35,7 @@ Các thành phần cũ React, React Bootstrap, ApiController và FrontendRespons
 
 ## Bản demo chạy local — 03/11/2026
 
-LocalServer ở package gốc vn.hospital chỉ khởi động Tomcat 10.1 trên localhost:3000 và kiểm tra kết nối DB trước khi mở web. Không đặt server trong src/test và không cần chạy bộ bài test.
+LocalServer ở package gốc vn.hospital khởi động Tomcat 10.1 tại địa chỉ cố định localhost:3000/hospital và kiểm tra bản build/kết nối DB trước khi mở web. Script kiểm tra cổng trước khi clean để tránh xóa target của server đang chạy. Docker cũng cấu hình HTTP Connector và ánh xạ cổng 3000:3000. Không đặt server trong src/test và không cần chạy bộ bài test.
 
 Mọi CREATE/INSERT nằm trong database/hospital.sql, database tên hospital. File cấu hình riêng lấy từ application-local.properties.example. UI dùng JSP/HTML/CSS/JavaScript thuần. Có lịch lặp tuần/tháng, Manager duyệt nghỉ và gói dịch vụ; phần này dùng cùng Service/DAO và không đổi ranh giới các tầng.
 
