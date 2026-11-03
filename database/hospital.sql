@@ -1,13 +1,13 @@
 -- HOSPITAL MANAGEMENT: MỘT FILE DUY NHẤT GỒM TẠO BẢNG VÀ DỮ LIỆU DEMO.
 -- MySQL 8.4 trở lên. Workbench: File > Open SQL Script > Query > Execute (All or Selection).
--- Dùng database hospital_demo mới. Không có DROP, procedure, DELIMITER hoặc file seed phụ.
+-- Tên database thống nhất: hospital. Không có DROP, procedure, DELIMITER hoặc file seed phụ.
 -- Nếu database đã có bảng: không chạy lại; giữ dữ liệu và tiếp tục demo trên web.
 -- 18 bảng nghiệp vụ theo ERD và 8 bảng hỗ trợ cho triển khai, dòng phí, gói khám, nhật ký.
 SET NAMES utf8mb4;
 SET SESSION time_zone = '+07:00';
 
-CREATE DATABASE IF NOT EXISTS hospital_demo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE hospital_demo;
+CREATE DATABASE IF NOT EXISTS hospital CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE hospital;
 SET NAMES utf8mb4;
 
 -- Vai trò và tài khoản
@@ -482,4 +482,4 @@ INSERT INTO feedback(record_id,patient_id,doctor_id,rating,comment) VALUES
 -- Điểm trung bình 5 đã nằm trong INSERT doctors theo feedback mẫu.
 COMMIT;
 
-SELECT 'Đã tạo database hospital_demo. Mở http://localhost:3000/hospital/login' AS huong_dan;
+SELECT 'Đã tạo database hospital. Mở http://localhost:3000/hospital/login' AS huong_dan;

@@ -1,6 +1,6 @@
 # Hospital Management — Servlet + JSP
 
-Ứng dụng demo 4 main workflow bằng **Java 17+, Servlet 6, JSP/JSTL, JDBC, MySQL 8.4+ và Tomcat 10.1**. UI chỉ dùng HTML, CSS và JavaScript thuần; không có React, Bootstrap, Node/npm hoặc bộ bài test.
+Ứng dụng demo 4 main workflow bằng **Java 17, Servlet 6, JSP/JSTL, JDBC, MySQL 8.4+ và Tomcat 10.1**. UI chỉ dùng HTML, CSS và JavaScript thuần; không có React, Bootstrap, Node/npm hoặc bộ bài test.
 
 ## Người mới pull code: làm đúng 3 bước
 
@@ -8,7 +8,7 @@
 
 Mở **`database/hospital.sql`** trong MySQL Workbench bằng **File → Open SQL Script**, rồi chọn **Query → Execute (All or Selection)** để chạy nguyên file.
 
-File này đã có **CREATE DATABASE, CREATE TABLE và INSERT dữ liệu trình bày**. Không có procedure/DELIMITER, file seed phụ, migration hoặc backup. Database được tạo là **`hospital_demo`**; không đụng database `hospital` của bản cũ. Chỉ nạp một lần khi `hospital_demo` chưa có bảng. Sau đó mọi thao tác demo thực hiện trên web, không nạp lại SQL để reset.
+File này đã có **CREATE DATABASE, CREATE TABLE và INSERT dữ liệu trình bày**. Không có procedure/DELIMITER, file seed phụ, migration hoặc backup. Tên database thống nhất là **`hospital`**. File không tự xóa hoặc ghi đè database đang có. Chỉ nạp một lần khi `hospital` chưa có bảng. Sau đó mọi thao tác demo thực hiện trên web, không nạp lại SQL để reset.
 
 Có thể dùng PowerShell thay Workbench:
 
@@ -23,7 +23,7 @@ Có thể dùng PowerShell thay Workbench:
 Copy `src/main/resources/application-local.properties.example` thành **`src/main/resources/application-local.properties`**, rồi sửa:
 
 ```properties
-DB_URL=jdbc:mysql://127.0.0.1:3306/hospital_demo?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+DB_URL=jdbc:mysql://127.0.0.1:3306/hospital?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
 DB_USER=root
 DB_PASSWORD=mat_khau_mysql_cua_may_ban
 APP_BASE_URL=http://localhost:3000/hospital
@@ -33,7 +33,9 @@ APP_BASE_URL=http://localhost:3000/hospital
 
 ### 3. Chạy web
 
-Cài JDK 17 trở lên, Maven và MySQL. Từ thư mục dự án:
+Cấu hình chung của nhóm là **JDK 17 + Tomcat 10.1**. Cài JDK 17, Maven và MySQL; đặt `JAVA_HOME` tới thư mục JDK. JDK 21/25 cũng có thể build, nhưng Maven luôn xuất bytecode Java 17 nhờ `maven.compiler.release=17` trong `pom.xml`. Không sửa giá trị này theo JDK riêng của từng máy.
+
+Từ thư mục dự án, sau khi dừng server cũ:
 
 ```powershell
 .\scripts\run-dev.ps1
@@ -42,11 +44,15 @@ Cài JDK 17 trở lên, Maven và MySQL. Từ thư mục dự án:
 Mở **http://localhost:3000/hospital/login**. Script build WAR rồi chạy Tomcat local; không cần cấu hình Tomcat trong IDE. Nếu dùng Maven trực tiếp:
 
 ```powershell
-mvn package
+mvn clean package
 mvn exec:java
 ```
 
-Dừng web bằng Ctrl+C. Nếu IDE cần deploy: dùng `target/hospital.war` với Tomcat **10.1**, không dùng Tomcat 9. Chỉ chạy một server trên cổng 3000.
+Dừng web bằng Ctrl+C. Script tự build sạch rồi chạy Tomcat **10.1.61** đi kèm Maven trên cổng 3000, không cần cài/configure Tomcat riêng. Chỉ chạy một server trên cổng 3000.
+
+Nếu chạy qua IDE/Tomcat cài riêng: chọn **JDK 17** cho Project/Maven và Java chạy Tomcat; dùng Tomcat **10.1**, không dùng Tomcat 9. Undeploy bản cũ qua IDE/Tomcat Manager rồi deploy **`target/hospital.war` vừa build**. IDE có thể giữ cấu hình JDK hoặc thư mục deploy riêng; pull code không tự đổi được các cấu hình đó.
+
+Khi cập nhật code: `git pull` trên nhánh của nhóm, giữ cấu hình MySQL riêng của mình, dừng web và chạy lại `scripts/run-dev.ps1`. **Không nạp lại SQL nếu `hospital` đã có đầy đủ bảng**. Nếu trước đó dùng `hospital_demo`, bản cấu hình mới dùng `hospital`: nạp file SQL vào `hospital` chưa có bảng và đổi URL theo bước 2. Nếu `hospital` đã chứa bảng của phiên bản cũ, không nhập chồng file SQL; cần đối chiếu schema trước khi cập nhật để giữ dữ liệu.
 
 ## Tài khoản web
 
@@ -88,8 +94,10 @@ SQL giữ 18 bảng nghiệp vụ của ERD và 8 bảng hỗ trợ triển khai
 ## Nếu chưa chạy được
 
 - **Không kết nối DB / Access denied:** MySQL phải đang chạy; so lại host, port, `DB_USER`, `DB_PASSWORD` với Workbench.
-- **Unknown database / table / column:** kiểm tra đã nạp `database/hospital.sql` và URL trỏ đúng `hospital_demo`, không trỏ database cũ.
-- **Table already exists:** SQL đã được nạp trước đó. Không chạy lại; điền cấu hình và chạy web. Nếu đã có dữ liệu cần giữ, không tự xóa database.
+- **UnsupportedClassVersionError / class file version 63 hoặc 69:** đang deploy file build Java 19/25 vào Java 17. Dừng/undeploy bản cũ, dùng `mvn clean package` của cấu hình mới rồi deploy lại WAR. Kiểm tra `java -version`, `mvn -version` và JDK của Tomcat trong IDE.
+- **Unknown database / table / column:** kiểm tra đã nạp `database/hospital.sql` và URL trỏ đúng `hospital` và schema tương ứng với bản code mới.
+- **Đã sửa URL nhưng vẫn báo database `hospital_demo`:** kiểm tra biến môi trường `DB_URL` của terminal/IDE/Tomcat; biến môi trường được ưu tiên hơn file properties. Sửa biến đó, build và khởi động lại server.
+- **Table already exists:** database đã có bảng; dừng nhập SQL. Nếu đã nạp đúng bản hiện tại thì chỉ cần cấu hình và chạy web. Nếu là schema cũ, cần đối chiếu trước khi cập nhật; không tự xóa dữ liệu.
 - **Cổng 3000 đang dùng:** dừng bản web cũ trước khi mở bản mới.
 - **Không nhận lịch / không gọi người tiếp theo:** chọn lịch đúng hôm nay; ca phải còn giờ/chỗ; bác sĩ hoàn tất ca đang khám trước khi gọi người khác. Có thể tạo thêm ca bằng màn hình Lịch bác sĩ.
 

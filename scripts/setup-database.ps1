@@ -29,7 +29,7 @@ try {
     [Console]::OutputEncoding = $OutputEncoding
     $sql | & $MySqlPath @mysqlArguments
     if ($LASTEXITCODE -ne 0) { throw 'Nạp SQL thất bại. Không chạy lại trên DB đã có bảng; xem lỗi MySQL phía trên.' }
-    Write-Host 'Đã tạo hospital_demo. Sửa cấu hình MySQL rồi chạy scripts/run-dev.ps1.'
+    Write-Host 'Đã tạo hospital. Sửa cấu hình MySQL rồi chạy scripts/run-dev.ps1.'
 } finally {
     $OutputEncoding = $oldEncoding
     [Console]::OutputEncoding = $oldConsoleEncoding

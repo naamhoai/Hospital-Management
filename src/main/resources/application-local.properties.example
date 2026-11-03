@@ -1,5 +1,5 @@
 # Copy file này thành application-local.properties rồi nhập tài khoản MySQL trên máy bạn.
-DB_URL=jdbc:mysql://127.0.0.1:3306/hospital_demo?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+DB_URL=jdbc:mysql://127.0.0.1:3306/hospital?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
 DB_USER=root
 DB_PASSWORD=nhap_mat_khau_mysql_cua_ban
 APP_BASE_URL=http://localhost:3000/hospital

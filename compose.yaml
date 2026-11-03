@@ -2,7 +2,7 @@ services:
   db:
     image: mysql:8.4
     environment:
-      MYSQL_DATABASE: hospital_demo
+      MYSQL_DATABASE: hospital
       MYSQL_USER: hospital
       MYSQL_PASSWORD: ${DB_PASSWORD:-change-me-local}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-me-root-local}
@@ -19,7 +19,7 @@ services:
   web:
     build: .
     environment:
-      DB_URL: jdbc:mysql://db:3306/hospital_demo?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      DB_URL: jdbc:mysql://db:3306/hospital?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
       DB_USER: hospital
       DB_PASSWORD: ${DB_PASSWORD:-change-me-local}
       APP_BASE_URL: http://localhost:3000/hospital

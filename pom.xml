@@ -6,7 +6,8 @@
   <version>1.0.0</version>
   <packaging>war</packaging>
   <properties>
-    <maven.compiler.release>25</maven.compiler.release>
+    <!-- Xuất bytecode Java 17, kể cả khi máy build cài JDK 21 hoặc 25. -->
+    <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.test.skip>true</maven.test.skip>
   </properties>
