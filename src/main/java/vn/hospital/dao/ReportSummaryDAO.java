@@ -1,6 +1,5 @@
 package vn.hospital.dao;
 
-import java.sql.*;
 import java.time.LocalDate;
 import java.util.Map;
 import vn.hospital.util.Database;

@@ -1,6 +1,5 @@
 package vn.hospital.dao;
 
-import java.sql.*;
 import java.util.*;
 import vn.hospital.model.*;
 import vn.hospital.util.Database;

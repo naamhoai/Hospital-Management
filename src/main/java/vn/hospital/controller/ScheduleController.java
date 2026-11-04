@@ -4,7 +4,6 @@ import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
-import vn.hospital.service.*;
 import vn.hospital.service.ScheduleService;
 import vn.hospital.util.BusinessException;
 
